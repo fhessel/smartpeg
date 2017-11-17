@@ -21,3 +21,12 @@ CREATE TABLE measurement (
     PRIMARY KEY (peg_id, nr),
     FOREIGN KEY (peg_id) REFERENCES peg(id)
 );
+
+-- some dummy data
+
+INSERT INTO peg(bat_status) VALUES (1);
+INSERT INTO peg(bat_status) VALUES (2);
+
+INSERT INTO measurement(peg_id, nr, temperature, humidity, conductance, timestamp) VALUES (1, 2, 21.4, 45.7, 36, NOW());
+INSERT INTO measurement(peg_id, nr, temperature, humidity, conductance, timestamp) VALUES (1, 1, 23.4, 50.3, 13, NOW());
+
