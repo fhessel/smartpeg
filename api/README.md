@@ -14,3 +14,8 @@ There are two ways to handle this for the final project:
 
 - Use a real, DNS-resolvable hostname (either by creating a real DNS entry - I could provide smartpeg.fhessel.de) or by setting up a test environment consisting of DHCP and local DNS server, that handels the fake smart.peg DNS name that is currently configured
 - Ignore the name defined in the yaml-file and change the target in the code (less dynamic, as it requires reconfiguration for every change of destination host)
+
+## REST API
+
+Need to change the driver for the database if not using mysql.
+Need to change database connexion informations
