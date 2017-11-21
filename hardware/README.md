@@ -20,6 +20,11 @@ The project currently makes use of:
 - Some wires
 - A peg
 
+### Resources
+
+- [Guide on calculating I²C pullup resistors](http://www.ti.com/lit/an/slva689/slva689.pdf) by Texas Instrucments
+- [Data Sheet for HDC1080](http://www.ti.com/lit/ds/symlink/hdc1080.pdf) temperature and humidity sensor
+
 ## Code
 
 The code subfolder contains the project that generates the program running on the ESP8266
@@ -39,3 +44,4 @@ To setup the development environment:
 - Checkout the project into a new workspace
 - Copy all foo.example.h files in the /config folder to get an individual configuration (instructions included in the files)
 - Compile the project and upload it to the board
+
