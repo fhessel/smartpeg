@@ -41,7 +41,7 @@ void loop()
 		if (client) {
 			hasConnection = true;
 			client.setNoDelay(false);
-			client.println("\"time_ms\",\"humidity_percent\",\"temperature_degc\",\"dryness_raw\"");
+			client.println("\"sensor\",\"time_ms\",\"humidity_percent\",\"temperature_degc\",\"dryness_raw\"");
 		}
 	}
 
@@ -49,6 +49,7 @@ void loop()
 		float temperature = sensor.getTemperature();
 		float humidity    = sensor.getHumidity();
 		float dryness     = peg.readDryness();
+		Serial.print("\"DHC1080\",");
 		Serial.print(humidity, 6);
 		Serial.print(" ");
 		Serial.print(temperature, 6);
@@ -68,6 +69,7 @@ void loop()
 
 			if (client.connected()) {
 
+				client.print("\"DHC1080\",");
 				client.print(ms, DEC);
 				client.print(",");
 				client.print(humidity, 6);
