@@ -1,8 +1,8 @@
 // Do not remove the include below
 #include "smartpeg.h"
 
-// Temperature and humidity sensor
-DHT sensor = DHT(PIN_SENSOR,PIN_SENSOR_TYPE);
+// Temperature and humidity sensor HDC1080, connected to D2 (=SDA) and D1 (=SCL) via I²C
+HDC1080 sensor = HDC1080(SDA, SCL);
 
 // Peg sensor (checks for conductivity of the peg)
 Peg peg    = Peg(PIN_PEG);
@@ -17,7 +17,7 @@ void setup()
 	pinMode(PIN_LED_WIFI, OUTPUT);
 
 	setupSerialMonitor();
-	setupDHTSensor();
+	setupHDCSensor();
 	setupWiFi();
 
 	// FIXME: As long as the REST API is not functional, the peg will
@@ -45,9 +45,9 @@ void loop()
 		}
 	}
 
-	if (ms - lastOutput > 500) {
-		float temperature = sensor.readTemperature();
-		float humidity    = sensor.readHumidity();
+	if (ms - lastOutput > 5000) {
+		float temperature = sensor.getTemperature();
+		float humidity    = sensor.getHumidity();
 		float dryness     = peg.readDryness();
 		Serial.print(humidity, 6);
 		Serial.print(" ");
@@ -55,6 +55,9 @@ void loop()
 		Serial.print(" ");
 		Serial.println(dryness, 6);
 		lastOutput = millis();
+
+		// Trigger next measurement (the sensor needs some time);
+		sensor.triggerMeasurement();
 
 
 		if (client){
@@ -82,10 +85,20 @@ void loop()
 	}
 }
 
-void setupDHTSensor() {
+void setupHDCSensor() {
 	// Initialize the library. Easy.
 	Serial.print("Setting up sensor...");
-	sensor.begin();
+	uint8_t err = sensor.begin();
+	if (err) {
+		Serial.print(" Failed");
+		while(1) {
+			delay(1000);
+			Serial.print(".");
+		}
+	}
+	Serial.println(" Done.");
+	Serial.print("Triggering initial read...");
+	sensor.triggerMeasurement();
 	Serial.println(" Done.");
 }
 
