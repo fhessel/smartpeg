@@ -41,7 +41,7 @@ void loop()
 		if (client) {
 			hasConnection = true;
 			client.setNoDelay(false);
-			client.println("\"time_ms\",\"humidity_percent\",\"temperature_degc\",\"dryness_raw\"");
+			client.println("\"sensor\",\"time_ms\",\"humidity_percent\",\"temperature_degc\",\"dryness_raw\"");
 		}
 	}
 
@@ -49,6 +49,7 @@ void loop()
 		float temperature = sensor.readTemperature();
 		float humidity    = sensor.readHumidity();
 		float dryness     = peg.readDryness();
+		Serial.print("\"DHT22\",");
 		Serial.print(humidity, 6);
 		Serial.print(" ");
 		Serial.print(temperature, 6);
@@ -65,6 +66,7 @@ void loop()
 
 			if (client.connected()) {
 
+				client.print("\"DHT22\",");
 				client.print(ms, DEC);
 				client.print(",");
 				client.print(humidity, 6);
