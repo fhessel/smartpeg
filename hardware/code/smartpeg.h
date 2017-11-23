@@ -12,7 +12,7 @@
 #include <ESP8266WiFi.h>
 
 // Temperature and humidity sensors
-#include <DHT.h>
+#include "sensors/HDC1080.h"
 
 // Peg sensor
 #include "sensors/Peg.h"
@@ -24,7 +24,7 @@
 #include "config/pins.h"
 
 void setupSerialMonitor();
-void setupDHTSensor();
+void setupHDCSensor();
 void setupWiFi();
 
 //Do not add code below this line
