@@ -20,4 +20,19 @@
     <servlet-name>jersey-serlvet</servlet-name>
     <url-pattern>/smartpeg/*</url-pattern>
   </servlet-mapping>
+  
+  <resource-ref>
+	  <description>
+	    Database Connection
+	  </description>
+	  <res-ref-name>
+	    jdbc/smartpeg
+	  </res-ref-name>
+	  <res-type>
+	    javax.sql.DataSource
+	  </res-type>
+	  <res-auth>
+	    Container
+	  </res-auth>
+	</resource-ref>
 </web-app>
