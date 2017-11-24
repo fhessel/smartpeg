@@ -16,7 +16,7 @@
 // Measure temperature with 14 bit precision
 #define HDC_CONF_TEMPRES_14BIT    (0x00 << 10)
 // Measure temperature with 11 bit precision
-#define HDC_CONF_TEMPRES_14BIT    (0x00 << 10)
+#define HDC_CONF_TEMPRES_11BIT    (0x01 << 10)
 
 // Measure humidity with 14 bit precision
 #define HDC_CONF_HUMRES_14BIT     (0x00 << 9)
@@ -24,6 +24,9 @@
 #define HDC_CONF_HUMRES_11BIT     (0x01 << 9)
 // Measure humidity with 8 bit precision
 #define HDC_CONF_HUMRES_8BIT      (0x02 << 9)
+
+// Activate heater during measurement
+#define HDC_CONF_ACTIVATE_HEATER  (0x01 << 13)
 
 // Address pointer value to trigger measurements
 #define HDC_ADDR_TRIGGER_MEASURE  0x00
@@ -37,7 +40,7 @@
 #define HDC_ADDR_CONFIGURATION    0x02
 
 // Duration of a measurement in ms
-#define HDC_MEASUREMENT_DURATION 1000
+#define HDC_MEASUREMENT_DURATION 16000
 
 HDC1080::HDC1080(uint8_t sda, uint8_t scl):
 	_sda(sda),
@@ -70,8 +73,9 @@ uint8_t HDC1080::setupConfigurationRegisters() {
 
 	uint8_t  pointerRegister = HDC_ADDR_CONFIGURATION;
 	uint16_t registerValue   =
-			HDC_CONF_MEASURE_TEMPHUM &
-			HDC_CONF_TEMPRES_14BIT &
+			HDC_CONF_MEASURE_TEMPHUM |
+			HDC_CONF_ACTIVATE_HEATER |
+			HDC_CONF_TEMPRES_14BIT |
 			HDC_CONF_HUMRES_14BIT;
 
 	Wire.beginTransmission(HDC_DEVICE_ADDRESS);
