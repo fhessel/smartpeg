@@ -1,6 +1,8 @@
 package de.tudarmstadt.smartpeg;
 
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import javax.sql.DataSource;
 import javax.ws.rs.*;
@@ -31,10 +33,19 @@ public class SmartPegService {
 
     @POST
     @Path("/{pegID}/readings")
-    @Consumes(MediaType.APPLICATION_JSON)
-    public Response setPeg(@PathParam("pegID") int pegID, JSONObject measurement){
+    @Consumes("application/json")
+    public Response setPeg(@PathParam("pegID") int pegID, String measurement){
+        JSONParser parser = new JSONParser();
+        JSONObject json;
+        try {
+            json = (JSONObject) parser.parse(measurement);
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return Response.status(400).entity("Error adding the measurement: Invalid JSON Format.").build();
+        }
+        logger.info("received post request with following json: " + measurement);
         ds = getDataSource("mysql");
-        boolean success = PegManagement.setPegMeasurement(pegID, measurement, ds, logger);
+        boolean success = PegManagement.setPegMeasurement(pegID, json, ds, logger);
         if(success){
             return Response.status(200).entity("Peg Measurement added with success").build();
         }else{

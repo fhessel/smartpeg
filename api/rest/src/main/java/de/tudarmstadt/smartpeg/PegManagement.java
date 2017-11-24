@@ -8,6 +8,10 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.sql.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 /**
@@ -30,7 +34,7 @@ public class PegManagement {
      *  ],
      *  "predictions": [
      *      {
-     *          "dryAt": yyyy-mm-dd mm:hh:ss
+     *          "dryAt": "yyyy-mm-dd mm:hh:ss"
      *      }
      *  ]
      * }
@@ -145,6 +149,13 @@ public class PegManagement {
     }
 
     public static boolean setPegMeasurement(int pegID, JSONObject measurement, DataSource dataSource, Logger logger){
+
+        // verify that the JSON has the correct format and return false if it doesn't
+        // TODO test if this function works
+        if(!formatIsCorrect(measurement)){
+            return false;
+        }
+
         Connection connexion = null;
         PreparedStatement prepared_statement = null;
         ResultSet result = null;
@@ -155,11 +166,11 @@ public class PegManagement {
             PreparedStatement get_prep_st = connexion.prepareStatement(
                     "SELECT nr FROM measurement WHERE peg_id = ? ORDER BY nr DESC LIMIT 1;");
             get_prep_st.setInt(1, pegID);
-            result = prepared_statement.executeQuery();
+            result = get_prep_st.executeQuery();
             // Set nr to the number of the last measurement if there is one
             int nr;
             if(result.next()) {
-                nr = result.getInt("nr");
+                nr = result.getInt("nr")+1;
             }else {
                 nr = 0;
             }
@@ -168,19 +179,18 @@ public class PegManagement {
             prepared_statement = connexion.prepareStatement(
                     "INSERT INTO measurement (peg_id, nr, temperature, humidity, conductance, timestamp)" +
             "VALUES(?, ?, ?, ?, ?, ?);");
-            // TODO verify that the JSON has the correct format and return false if it doesn't
             prepared_statement.setInt(1, pegID);
             prepared_statement.setInt(2, nr);
-            prepared_statement.setFloat(3, Float.parseFloat((String)measurement.get("temperature")));
-            prepared_statement.setFloat(4, Float.parseFloat((String)measurement.get("humidity")));
-            prepared_statement.setInt(5, Integer.parseInt((String)measurement.get("conductance")));
-            prepared_statement.setTimestamp(6, Timestamp.valueOf((String)measurement.get("temperature")));
+            prepared_statement.setFloat(3, new Float((Double)measurement.get("temperature")));
+            prepared_statement.setFloat(4, new Float((Double)measurement.get("humidity")));
+            prepared_statement.setInt(5, ((Long)measurement.get("conductance")).intValue());
+            prepared_statement.setTimestamp(6, Timestamp.valueOf((String)measurement.get("timestamp")));
+            System.out.println("peg ID: " + pegID);
+            System.out.println("nr: " + nr);
+            // Update the table if it is possible
             if(prepared_statement.executeUpdate() == -1){
                 return false;
             }
-
-        /* Execute a reading query */
-            result = prepared_statement.executeQuery();
         } catch ( SQLException e ) {
             logger.severe( "Error while connecting : "
                     + e.getMessage() );
@@ -205,6 +215,30 @@ public class PegManagement {
                     connexion.close();
                 } catch ( SQLException ignore ) {
                 }
+            }
+        }
+        return true;
+    }
+
+    private static boolean formatIsCorrect(JSONObject measurement) {
+        HashMap<String, Class> values = new HashMap<String, Class>();
+        values.put("temperature", Double.class);
+        values.put("humidity", Double.class);
+        values.put("conductance", Long.class);
+        values.put("timestamp", String.class);
+        Set<Map.Entry<String, Class>> values_set = values.entrySet();
+        Iterator<Map.Entry<String, Class>> values_it = values_set.iterator();
+        while(values_it.hasNext()){
+            Map.Entry<String, Class> value = values_it.next();
+            String key = value.getKey();
+            Class val_class = value.getValue();
+            // TODO test if the class of the result is corresponding to the one wanted
+            if(measurement == null){
+                return false;
+            }
+            System.out.println("Result: " + measurement.get(key) + " and class: " + measurement.get(key).getClass());
+            if(measurement.get(key) == null || !measurement.get(key).getClass().equals(val_class)){
+                return false;
             }
         }
         return true;

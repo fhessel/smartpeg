@@ -17,5 +17,6 @@ There are two ways to handle this for the final project:
 
 ## REST API
 
-Need to change the driver for the database if not using mysql.
-Need to change database connexion informations
+Need to change the datasource for the database if not using mysql.
+
+Need to change database connexion informations in db.properties
