@@ -4,7 +4,6 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import javax.sql.DataSource;
-import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.sql.*;
@@ -20,6 +19,8 @@ import java.util.logging.Logger;
  */
 public class PegManagement {
 
+    private static Logger logger = Logger.getLogger(PegManagement.class.getName());
+    
     /**
      * This method gets all infos from the peg with the given id:
      * {
@@ -43,7 +44,7 @@ public class PegManagement {
      * @param logger The logger where the logs should be written
      * @return json in case it was found. Null if no peg was found
      */
-    public static JSONObject getPegInfos(int pegID, DataSource dataSource, Logger logger){
+    public static JSONObject getPegInfos(int pegID, DataSource dataSource){
         JSONObject json = new JSONObject();
 
         /* Connect to the database */
@@ -148,7 +149,7 @@ public class PegManagement {
         return json;
     }
 
-    public static boolean setPegMeasurement(int pegID, JSONObject measurement, DataSource dataSource, Logger logger){
+    public static boolean setPegMeasurement(int pegID, JSONObject measurement, DataSource dataSource){
 
         // verify that the JSON has the correct format and return false if it doesn't
         // TODO test if this function works
