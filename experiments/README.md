@@ -13,3 +13,5 @@ in the end, the clothes have been mostly dry. Some gaps in the data are caused b
 not that stable.
 
 2017-11-20-experiment03.csv - real conditions, indoor, rainy, window open. Starts in the moment the clothes started to dry.
+
+2017-11-25-experiment04.csv - real conditions, indoor, rainy day, from beginning. Includes readings for both sensors.
