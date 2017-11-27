@@ -17,4 +17,7 @@
 // Peg sensor
 #define PIN_PEG         A0
 
+// DHT sensor
+#define PIN_DHT22       D6
+
 #endif /* CONFIG_PINS_H_ */

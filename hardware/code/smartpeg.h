@@ -13,6 +13,7 @@
 
 // Temperature and humidity sensors
 #include "sensors/HDC1080.h"
+#include <DHT.h>
 
 // Peg sensor
 #include "sensors/Peg.h"
@@ -24,6 +25,7 @@
 #include "config/pins.h"
 
 void setupSerialMonitor();
+void setupDHTSensor();
 void setupHDCSensor();
 void setupWiFi();
 

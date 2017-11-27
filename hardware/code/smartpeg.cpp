@@ -4,6 +4,8 @@
 // Temperature and humidity sensor HDC1080, connected to D2 (=SDA) and D1 (=SCL) via I²C
 HDC1080 sensor = HDC1080(SDA, SCL);
 
+DHT dht = DHT(PIN_DHT22, DHT22);
+
 // Peg sensor (checks for conductivity of the peg)
 Peg peg    = Peg(PIN_PEG);
 
@@ -17,6 +19,7 @@ void setup()
 	pinMode(PIN_LED_WIFI, OUTPUT);
 
 	setupSerialMonitor();
+	setupDHTSensor();
 	setupHDCSensor();
 	setupWiFi();
 
@@ -48,11 +51,21 @@ void loop()
 	if (ms - lastOutput > 5000) {
 		float temperature = sensor.getTemperature();
 		float humidity    = sensor.getHumidity();
+
+		float temperatureDht = dht.readTemperature();
+		float humidityDht    = dht.readHumidity();
+
 		float dryness     = peg.readDryness();
 		Serial.print("\"DHC1080\",");
 		Serial.print(humidity, 6);
 		Serial.print(" ");
 		Serial.print(temperature, 6);
+		Serial.print(" ");
+		Serial.println(dryness, 6);
+		Serial.print("\"DHT22\",");
+		Serial.print(humidityDht, 6);
+		Serial.print(" ");
+		Serial.print(temperatureDht, 6);
 		Serial.print(" ");
 		Serial.println(dryness, 6);
 		lastOutput = millis();
@@ -77,6 +90,14 @@ void loop()
 				client.print(temperature, 6);
 				client.print(",");
 				client.println(dryness, 6);
+				client.print("\"DHT22\",");
+				client.print(ms, DEC);
+				client.print(",");
+				client.print(humidityDht, 6);
+				client.print(",");
+				client.print(temperatureDht, 6);
+				client.print(",");
+				client.println(dryness, 6);
 				client.flush();
 
 			} else {
@@ -89,7 +110,7 @@ void loop()
 
 void setupHDCSensor() {
 	// Initialize the library. Easy.
-	Serial.print("Setting up sensor...");
+	Serial.print("Setting up HDC1080 sensor...");
 	uint8_t err = sensor.begin();
 	if (err) {
 		Serial.print(" Failed");
@@ -147,4 +168,10 @@ void setupSerialMonitor() {
 	// (without delay, some output might be missing)
 	Serial.begin(115200);
 	delay(2000);
+}
+
+void setupDHTSensor() {
+	Serial.print("Setting up DHT22 sensor...");
+	dht.begin();
+	Serial.println(" Done.");
 }
