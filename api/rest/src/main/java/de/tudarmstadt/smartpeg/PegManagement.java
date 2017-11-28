@@ -41,7 +41,6 @@ public class PegManagement {
      * }
      * @param pegID The ID of the peg to search
      * @param dataSource The dataSource pointing to the database
-     * @param logger The logger where the logs should be written
      * @return json in case it was found. Null if no peg was found
      */
     public static JSONObject getPegInfos(int pegID, DataSource dataSource){
@@ -179,20 +178,17 @@ public class PegManagement {
         /* Create an object monitoring request setting the peg measurement */
             prepared_statement = connexion.prepareStatement(
                     "INSERT INTO measurement (peg_id, nr, temperature, humidity, conductance, timestamp)" +
-            "VALUES(?, ?, ?, ?, ?, ?);");
+            "VALUES(?, ?, ?, ?, ?, NOW());");
             prepared_statement.setInt(1, pegID);
             prepared_statement.setInt(2, nr);
             prepared_statement.setFloat(3, new Float((Double)measurement.get("temperature")));
             prepared_statement.setFloat(4, new Float((Double)measurement.get("humidity")));
             prepared_statement.setInt(5, ((Long)measurement.get("conductance")).intValue());
-            prepared_statement.setTimestamp(6, Timestamp.valueOf((String)measurement.get("timestamp")));
-            System.out.println("peg ID: " + pegID);
-            System.out.println("nr: " + nr);
             // Update the table if it is possible
             if(prepared_statement.executeUpdate() == -1){
                 return false;
             }
-        } catch ( SQLException e ) {
+        } catch ( Exception e ) {
             logger.severe( "Error while connecting : "
                     + e.getMessage() );
         } finally {
@@ -226,7 +222,6 @@ public class PegManagement {
         values.put("temperature", Double.class);
         values.put("humidity", Double.class);
         values.put("conductance", Long.class);
-        values.put("timestamp", String.class);
         Set<Map.Entry<String, Class>> values_set = values.entrySet();
         Iterator<Map.Entry<String, Class>> values_it = values_set.iterator();
         while(values_it.hasNext()){
@@ -237,7 +232,6 @@ public class PegManagement {
             if(measurement == null){
                 return false;
             }
-            System.out.println("Result: " + measurement.get(key) + " and class: " + measurement.get(key).getClass());
             if(measurement.get(key) == null || !measurement.get(key).getClass().equals(val_class)){
                 return false;
             }
