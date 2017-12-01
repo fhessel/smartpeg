@@ -82,7 +82,7 @@ public class PegManagement {
                     int nr = result.getInt("nr");
                     float temperature = result.getFloat("temperature");
                     float humidity = result.getFloat("humidity");
-                    int conductance = result.getInt("conductance");
+                    float conductance = result.getFloat("conductance");
                     Timestamp timestamp = result.getTimestamp("timestamp");
                     measurement.put("nr", nr);
                     measurement.put("temperature", temperature);
