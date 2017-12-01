@@ -37,6 +37,13 @@ void loop()
 	} else {
 
 		if (ms - lastOutput > 5000) {
+
+			// Show the sensor is alive
+			digitalWrite(PIN_LED_WIFI, HIGH);
+			delay(50);
+			digitalWrite(PIN_LED_WIFI, LOW);
+			delay(50);
+
 			float temperature = sensor.getTemperature();
 			float humidity    = sensor.getHumidity();
 
@@ -61,50 +68,76 @@ void loop()
 			// Trigger next measurement (the sensor needs some time);
 			sensor.triggerMeasurement();
 
-			HTTPClient http;
+			// Start transmitting only after the sensors are ready
+			if (temperature + humidity > 0.001f) {
 
-			// TODO: Make ID customizable
-			http.begin("http://smartpeg.fhessel.de/smartpeg/peg/1/readings");
+				{
+					HTTPClient httpDht22;
 
-			String jsonPayloadWithoutSensor =
-					String("{\"humidity\":") +
-					String(humidity, 5) +
-					String(",\"temperature\":") +
-					String(temperature, 5) +
-					String(",\"conductance\":") +
-					String(dryness, 5) +
-					String(",\"sensor_type\":");
+					// TODO: Make ID customizable
+					httpDht22.begin("http://smartpeg.fhessel.de/smartpeg/peg/1/readings");
 
-			String jsonPayloadDht22   = jsonPayloadWithoutSensor + String("\"DHT22\"}");
-			String jsonPayloadHdc1080 = jsonPayloadWithoutSensor + String("\"HDC1080\"}");
+					String jsonPayloadDht22   =
+						String("{\"humidity\":") +
+						String(humidityDht, 5) +
+						String(",\"temperature\":") +
+						String(temperatureDht, 5) +
+						String(",\"conductance\":") +
+						String(dryness, 5) +
+						String(",\"sensor_type\":") +
+						String("\"DHT22\"}");
 
-			int httpStatusCode = http.POST(jsonPayloadDht22);
+					int httpStatusCode = httpDht22.POST(jsonPayloadDht22);
 
-			if (httpStatusCode != 200) {
-				Serial.print("HTTP POST for DHT22 failed. Got return code: ");
-				Serial.println(httpStatusCode, DEC);
-				for(int i = 1; i < 10; i++) {
-					digitalWrite(PIN_LED_WIFI, HIGH);
-					delay(50);
-					digitalWrite(PIN_LED_WIFI, LOW);
-					delay(50);
+					if (httpStatusCode != 200) {
+						Serial.print("HTTP POST for DHT22 failed. Got return code: ");
+						Serial.println(httpStatusCode, DEC);
+						for(int i = 1; i < 10; i++) {
+							digitalWrite(PIN_LED_WIFI, HIGH);
+							delay(50);
+							digitalWrite(PIN_LED_WIFI, LOW);
+							delay(50);
+						}
+					}
+					httpDht22.end();
 				}
+
+				{
+					HTTPClient httpHdc1080;
+
+					// TODO: Make ID customizable
+					httpHdc1080.begin("http://smartpeg.fhessel.de/smartpeg/peg/1/readings");
+
+					String jsonPayloadHdc1080 =
+						String("{\"humidity\":") +
+						String(humidity, 5) +
+						String(",\"temperature\":") +
+						String(temperature, 5) +
+						String(",\"conductance\":") +
+						String(dryness, 5) +
+						String(",\"sensor_type\":") +
+						String("\"HDC1080\"}");
+
+					int httpStatusCode = httpHdc1080.POST(jsonPayloadHdc1080);
+
+					if (httpStatusCode != 200) {
+						Serial.print("HTTP POST for HDC1080 failed. Got return code: ");
+						Serial.println(httpStatusCode, DEC);
+						for(int i = 1; i < 10; i++) {
+							digitalWrite(PIN_LED_WIFI, HIGH);
+							delay(50);
+							digitalWrite(PIN_LED_WIFI, LOW);
+							delay(50);
+						}
+					}
+
+					httpHdc1080.end();
+				}
+
+			} else {
+				Serial.println("Sensors are not ready, not transmitting");
 			}
 
-			httpStatusCode = http.POST(jsonPayloadHdc1080);
-
-			if (httpStatusCode != 200) {
-				Serial.print("HTTP POST for HDC1080 failed. Got return code: ");
-				Serial.println(httpStatusCode, DEC);
-				for(int i = 1; i < 10; i++) {
-					digitalWrite(PIN_LED_WIFI, HIGH);
-					delay(50);
-					digitalWrite(PIN_LED_WIFI, LOW);
-					delay(50);
-				}
-			}
-
-			http.end();
 		}
 	}
 }
