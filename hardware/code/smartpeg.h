@@ -11,6 +11,9 @@
 // WiFi
 #include <ESP8266WiFi.h>
 
+// HTTP
+#include <ESP8266HTTPClient.h>
+
 // Temperature and humidity sensors
 #include "sensors/HDC1080.h"
 #include <DHT.h>
@@ -28,6 +31,7 @@ void setupSerialMonitor();
 void setupDHTSensor();
 void setupHDCSensor();
 void setupWiFi();
+void wifiConnectLoop();
 
 //Do not add code below this line
 #endif /* _smartpeg_H_ */

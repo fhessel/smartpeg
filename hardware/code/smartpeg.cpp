@@ -23,15 +23,8 @@ void setup()
 	setupHDCSensor();
 	setupWiFi();
 
-	// FIXME: As long as the REST API is not functional, the peg will
-	// provide its measurements either through serial console or on
-	// TCP port 500, where 1 CLIENT AT A TIME can connect. A CSV-like
-	// output is provided.
-    server.begin();
 }
 
-WiFiClient client;
-bool hasConnection = false;
 unsigned long lastOutput = 0;
 
 // The loop function is called in an endless loop
@@ -39,71 +32,79 @@ void loop()
 {
 	unsigned long ms = millis();
 
-	if (!hasConnection) {
-		client = server.available();
-		if (client) {
-			hasConnection = true;
-			client.setNoDelay(false);
-			client.println("\"sensor\",\"time_ms\",\"humidity_percent\",\"temperature_degc\",\"dryness_raw\"");
-		}
-	}
+	if(WiFi.status() != WL_CONNECTED) {
+		wifiConnectLoop();
+	} else {
 
-	if (ms - lastOutput > 5000) {
-		float temperature = sensor.getTemperature();
-		float humidity    = sensor.getHumidity();
+		if (ms - lastOutput > 5000) {
+			float temperature = sensor.getTemperature();
+			float humidity    = sensor.getHumidity();
 
-		float temperatureDht = dht.readTemperature();
-		float humidityDht    = dht.readHumidity();
+			float temperatureDht = dht.readTemperature();
+			float humidityDht    = dht.readHumidity();
 
-		float dryness     = peg.readDryness();
-		Serial.print("\"DHC1080\",");
-		Serial.print(humidity, 6);
-		Serial.print(" ");
-		Serial.print(temperature, 6);
-		Serial.print(" ");
-		Serial.println(dryness, 6);
-		Serial.print("\"DHT22\",");
-		Serial.print(humidityDht, 6);
-		Serial.print(" ");
-		Serial.print(temperatureDht, 6);
-		Serial.print(" ");
-		Serial.println(dryness, 6);
-		lastOutput = millis();
+			float dryness     = peg.readDryness();
+			Serial.print("\"DHC1080\",");
+			Serial.print(humidity, 6);
+			Serial.print(" ");
+			Serial.print(temperature, 6);
+			Serial.print(" ");
+			Serial.println(dryness, 6);
+			Serial.print("\"DHT22\",");
+			Serial.print(humidityDht, 6);
+			Serial.print(" ");
+			Serial.print(temperatureDht, 6);
+			Serial.print(" ");
+			Serial.println(dryness, 6);
+			lastOutput = millis();
 
-		// Trigger next measurement (the sensor needs some time);
-		sensor.triggerMeasurement();
+			// Trigger next measurement (the sensor needs some time);
+			sensor.triggerMeasurement();
 
+			HTTPClient http;
 
-		if (client){
+			// TODO: Make ID customizable
+			http.begin("http://smartpeg.fhessel.de/smartpeg/peg/1/readings");
 
-			while(client.available()>0) {
-				client.read();
+			String jsonPayloadWithoutSensor =
+					String("{\"humidity\":") +
+					String(humidity, 5) +
+					String(",\"temperature\":") +
+					String(temperature, 5) +
+					String(",\"conductance\":") +
+					String(dryness, 5) +
+					String(",\"sensor_type\":");
+
+			String jsonPayloadDht22   = jsonPayloadWithoutSensor + String("\"DHT22\"}");
+			String jsonPayloadHdc1080 = jsonPayloadWithoutSensor + String("\"HDC1080\"}");
+
+			int httpStatusCode = http.POST(jsonPayloadDht22);
+
+			if (httpStatusCode != 200) {
+				Serial.print("HTTP POST for DHT22 failed. Got return code: ");
+				Serial.println(httpStatusCode, DEC);
+				for(int i = 1; i < 10; i++) {
+					digitalWrite(PIN_LED_WIFI, HIGH);
+					delay(50);
+					digitalWrite(PIN_LED_WIFI, LOW);
+					delay(50);
+				}
 			}
 
-			if (client.connected()) {
+			httpStatusCode = http.POST(jsonPayloadHdc1080);
 
-				client.print("\"DHC1080\",");
-				client.print(ms, DEC);
-				client.print(",");
-				client.print(humidity, 6);
-				client.print(",");
-				client.print(temperature, 6);
-				client.print(",");
-				client.println(dryness, 6);
-				client.print("\"DHT22\",");
-				client.print(ms, DEC);
-				client.print(",");
-				client.print(humidityDht, 6);
-				client.print(",");
-				client.print(temperatureDht, 6);
-				client.print(",");
-				client.println(dryness, 6);
-				client.flush();
-
-			} else {
-				client.stop();
-				hasConnection = false;
+			if (httpStatusCode != 200) {
+				Serial.print("HTTP POST for HDC1080 failed. Got return code: ");
+				Serial.println(httpStatusCode, DEC);
+				for(int i = 1; i < 10; i++) {
+					digitalWrite(PIN_LED_WIFI, HIGH);
+					delay(50);
+					digitalWrite(PIN_LED_WIFI, LOW);
+					delay(50);
+				}
 			}
+
+			http.end();
 		}
 	}
 }
@@ -127,6 +128,17 @@ void setupHDCSensor() {
 
 void setupWiFi() {
 	Serial.print("Connecting to WiFi...");
+
+	wifiConnectLoop();
+
+	// Print some status information
+	Serial.println(" Done.");
+	Serial.print("My IP is ");
+    Serial.println(WiFi.localIP());
+}
+
+void wifiConnectLoop() {
+	digitalWrite(PIN_LED_WIFI, HIGH);
 
 	// We count the tries (=500ms steps) and reconnect every 15 tries
 	// until we get a connection
@@ -152,14 +164,8 @@ void setupWiFi() {
 		tries+=1;
 	} while(WiFi.status() != WL_CONNECTED);
 
-	// Set the LED high to show the connection has been established
-	// TODO: For the final release, set this to LOW to save energy
-	digitalWrite(PIN_LED_WIFI, HIGH);
-
-	// Print some status information
-	Serial.println(" Done.");
-	Serial.print("My IP is ");
-    Serial.println(WiFi.localIP());
+	// Set the LED low to show the connection has been established
+	digitalWrite(PIN_LED_WIFI, LOW);
 }
 
 void setupSerialMonitor() {
@@ -175,3 +181,4 @@ void setupDHTSensor() {
 	dht.begin();
 	Serial.println(" Done.");
 }
+
