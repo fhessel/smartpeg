@@ -8,6 +8,15 @@
 #define _smartpeg_H_
 #include "Arduino.h"
 
+// WiFi Settings
+#include "config/wificonfig.h"
+
+// Measurement configuration
+#include "config/measurement.h"
+
+// Pin configuration
+#include "config/pins.h"
+
 // WiFi
 #include <ESP8266WiFi.h>
 
@@ -15,21 +24,24 @@
 #include <ESP8266HTTPClient.h>
 
 // Temperature and humidity sensors
+#ifdef USE_HDC1080
 #include "sensors/HDC1080.h"
+#endif
+#ifdef USE_DHT22
 #include <DHT.h>
+#endif
 
 // Peg sensor
 #include "sensors/Peg.h"
 
-// WiFi Settings
-#include "config/wificonfig.h"
-
-// Pin configuration
-#include "config/pins.h"
 
 void setupSerialMonitor();
+#ifdef USE_DHT22
 void setupDHTSensor();
+#endif
+#ifdef USE_HDC1080
 void setupHDCSensor();
+#endif
 void setupWiFi();
 void wifiConnectLoop();
 
