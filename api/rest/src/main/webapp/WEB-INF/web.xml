@@ -21,6 +21,12 @@
     <url-pattern>/smartpeg/*</url-pattern>
   </servlet-mapping>
   
+  <listener>
+    <!-- This listener executes tasks periodically. We use it to trigger machine learning -->
+    <listener-class>de.tudarmstadt.smartpeg.scheduler.ScheduledExecutor</listener-class>
+  </listener>
+  
+  
   <resource-ref>
 	  <description>
 	    Database Connection
