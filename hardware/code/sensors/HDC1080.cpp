@@ -40,7 +40,7 @@
 #define HDC_ADDR_CONFIGURATION    0x02
 
 // Duration of a measurement in ms
-#define HDC_MEASUREMENT_DURATION 16000
+#define HDC_MEASUREMENT_DURATION 1000
 
 HDC1080::HDC1080(uint8_t sda, uint8_t scl):
 	_sda(sda),

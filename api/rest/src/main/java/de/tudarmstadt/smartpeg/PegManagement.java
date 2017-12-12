@@ -82,7 +82,7 @@ public class PegManagement {
                     int nr = result.getInt("nr");
                     float temperature = result.getFloat("temperature");
                     float humidity = result.getFloat("humidity");
-                    int conductance = result.getInt("conductance");
+                    float conductance = result.getFloat("conductance");
                     Timestamp timestamp = result.getTimestamp("timestamp");
                     measurement.put("nr", nr);
                     measurement.put("temperature", temperature);
@@ -243,13 +243,14 @@ public class PegManagement {
 
         /* Create an object monitoring request setting the peg measurement */
             prepared_statement = connexion.prepareStatement(
-                    "INSERT INTO measurement (peg_id, nr, temperature, humidity, conductance, timestamp)" +
-            "VALUES(?, ?, ?, ?, ?, NOW());");
+                    "INSERT INTO measurement (peg_id, nr, temperature, humidity, conductance, sensor_type, timestamp)" +
+            "VALUES(?, ?, ?, ?, ?, ?, NOW());");
             prepared_statement.setInt(1, pegID);
             prepared_statement.setInt(2, nr);
             prepared_statement.setFloat(3, new Float((Double)measurement.get("temperature")));
             prepared_statement.setFloat(4, new Float((Double)measurement.get("humidity")));
-            prepared_statement.setInt(5, ((Long)measurement.get("conductance")).intValue());
+            prepared_statement.setFloat(5, new Float((Double)measurement.get("conductance")));
+            prepared_statement.setString(6, measurement.get("sensor_type").toString());
             // Update the table if it is possible
             if(prepared_statement.executeUpdate() == -1){
                 return false;
@@ -287,7 +288,8 @@ public class PegManagement {
         HashMap<String, Class> values = new HashMap<String, Class>();
         values.put("temperature", Double.class);
         values.put("humidity", Double.class);
-        values.put("conductance", Long.class);
+        values.put("conductance", Double.class);
+        values.put("sensor_type", String.class);
         Set<Map.Entry<String, Class>> values_set = values.entrySet();
         Iterator<Map.Entry<String, Class>> values_it = values_set.iterator();
         while(values_it.hasNext()){
@@ -299,6 +301,8 @@ public class PegManagement {
                 return false;
             }
             if(measurement.get(key) == null || !measurement.get(key).getClass().equals(val_class)){
+            	logger.warning("Value for " + key + " in request with wrong data type (expected=" +
+            			val_class + ", got=" + measurement.get(key).getClass() + ")");
                 return false;
             }
         }

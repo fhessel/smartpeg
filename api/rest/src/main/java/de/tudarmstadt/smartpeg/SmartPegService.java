@@ -4,12 +4,12 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import javax.naming.Context;
-import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
+
+import static de.tudarmstadt.smartpeg.data.DataSourceProvider.getDataSource;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -84,20 +84,6 @@ public class SmartPegService {
         	logger.log(Level.SEVERE, "Cannot instantiate DataSource", ex);
         	return Response.status(500).entity("Service not available").build();
         }
-    }
-
-    /**
-     * Helper-Function to get a JNDI-Datasource, as the Resource-Annotation does not work properly
-     * @return The Datasource
-     * @throws NamingException If the datasource could not be retrieved, most probably because it's not configured
-     */
-    private DataSource getDataSource() throws NamingException {
-    	// Get JNDI-Context
-        Context initCtx = new InitialContext();
-        // Navigate to comp/env
-        Context envCtx = (Context) initCtx.lookup("java:comp/env");
-        // Get the datasource
-        return (DataSource)envCtx.lookup("jdbc/smartpeg");
     }
 
 }
