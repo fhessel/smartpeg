@@ -148,6 +148,72 @@ public class PegManagement {
         return json;
     }
 
+    public static JSONObject getLastMeasurement(int pegID, DataSource dataSource){
+        JSONObject json = new JSONObject();
+
+        /* Connect to the database */
+
+        Connection connexion = null;
+        PreparedStatement prepared_statement = null;
+        ResultSet result = null;
+        try {
+            logger.info( "Connecting to the database..." );
+            connexion = dataSource.getConnection();
+
+        /* Create an object monitoring request getting the peg infos */
+            prepared_statement = connexion.prepareStatement("SELECT * FROM measurement " +
+                    "WHERE peg_id  = ?" +
+                    "ORDER BY timestamp DESC LIMIT 1");
+            prepared_statement.setInt(1, pegID);
+
+        /* Execute a reading query */
+            result = prepared_statement.executeQuery();
+
+        /* Fetch the result of the reading of the query */
+            if ( result.next() ) {
+                int nr = result.getInt("nr");
+                float temperature = result.getFloat("temperature");
+                float humidity = result.getFloat("humidity");
+                int conductance = result.getInt("conductance");
+                Timestamp timestamp = result.getTimestamp("timestamp");
+                /* Format the result for the output. */
+                json.put("nr", nr);
+                json.put("temperature", temperature);
+                json.put("humidity", humidity);
+                json.put("conductance", conductance);
+                json.put("timestamp", timestamp);
+            }else{
+                return null;
+            }
+        } catch ( SQLException e ) {
+            logger.severe( "Error while connecting : "
+                    + e.getMessage() );
+        } finally {
+            logger.info( "Closing the ResultSet object." );
+            if ( result != null ) {
+                try {
+                    result.close();
+                } catch ( SQLException ignore ) {
+                }
+            }
+            logger.info( "Close the statement object." );
+            if ( prepared_statement != null ) {
+                try {
+                    prepared_statement.close();
+                } catch ( SQLException ignore ) {
+                }
+            }
+            logger.info( "Close the connection object." );
+            if ( connexion != null ) {
+                try {
+                    connexion.close();
+                } catch ( SQLException ignore ) {
+                }
+            }
+        }
+        return json;
+    }
+
     public static boolean setPegMeasurement(int pegID, JSONObject measurement, DataSource dataSource){
 
         // verify that the JSON has the correct format and return false if it doesn't
