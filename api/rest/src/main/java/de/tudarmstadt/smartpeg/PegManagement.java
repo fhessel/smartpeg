@@ -22,15 +22,17 @@ public class PegManagement {
     private static Logger logger = Logger.getLogger(PegManagement.class.getName());
     
     /**
-     * This method gets all infos from the peg with the given id:
+     * This method gets all infos from the peg with the given id (last 10 measurements and predictions):
      * {
      *  "id": 0,
      *  "bat_status": 0,
      *  "measurements": [
      *      {
+     *          "nr": 0,
      *          "temperature": 0,
      *          "humidity": 0,
-     *          "conductance": 0
+     *          "conductance": 0,
+     *          "timestamp": "yyyy-mm-dd mm:hh:ss"
      *      }
      *  ],
      *  "predictions": [
@@ -48,15 +50,17 @@ public class PegManagement {
 
         /* Connect to the database */
 
-        Connection connexion = null;
+        Connection connection = null;
         PreparedStatement prepared_statement = null;
+        PreparedStatement prepared_statement_measurements = null;
+        PreparedStatement prepared_statement_predictions = null;
         ResultSet result = null;
         try {
             logger.info( "Connecting to the database..." );
-            connexion = dataSource.getConnection();
+            connection = dataSource.getConnection();
 
         /* Create an object monitoring request getting the peg infos */
-            prepared_statement = connexion.prepareStatement("SELECT * FROM peg WHERE id = ?");
+            prepared_statement = connection.prepareStatement("SELECT * FROM peg WHERE id = ?");
             prepared_statement.setInt(1, pegID);
 
         /* Execute a reading query */
@@ -71,33 +75,26 @@ public class PegManagement {
                 json.put("bat_status", batStatus);
 
                 // Create an object monitoring request getting the peg measurements
-                prepared_statement = connexion.prepareStatement("SELECT * FROM measurement WHERE peg_id = ?");
-                prepared_statement.setInt(1, pegID);
+                prepared_statement_measurements = connection.prepareStatement("SELECT * FROM measurement WHERE peg_id = ? " +
+                        "ORDER BY timestamp DESC LIMIT 10");
+                prepared_statement_measurements.setInt(1, pegID);
                 // Store the query response
-                result = prepared_statement.executeQuery();
+                result = prepared_statement_measurements.executeQuery();
                 JSONArray measurements = new JSONArray();
                 // Add the measurements to the json
                 while(result.next()){
                     JSONObject measurement = new JSONObject();
-                    int nr = result.getInt("nr");
-                    float temperature = result.getFloat("temperature");
-                    float humidity = result.getFloat("humidity");
-                    float conductance = result.getFloat("conductance");
-                    Timestamp timestamp = result.getTimestamp("timestamp");
-                    measurement.put("nr", nr);
-                    measurement.put("temperature", temperature);
-                    measurement.put("humidity", humidity);
-                    measurement.put("conductance", conductance);
-                    measurement.put("timestamp", timestamp);
+                    addMeasurement(result, measurement);
                     measurements.add(measurement);
                 }
                 json.put("measurements", measurements);
 
                 // Create an object monitoring request getting the peg predictions
-                prepared_statement = connexion.prepareStatement("SELECT * FROM prediction WHERE peg_id = ?");
-                prepared_statement.setInt(1, pegID);
+                prepared_statement_predictions = connection.prepareStatement("SELECT * FROM prediction WHERE peg_id = ? " +
+                                "ORDER BY nr DESC LIMIT 10");
+                prepared_statement_predictions.setInt(1, pegID);
                 // Store the query response
-                result = prepared_statement.executeQuery();
+                result = prepared_statement_predictions.executeQuery();
                 JSONArray predictions = new JSONArray();
                 // Add the measurements to the json
                 while(result.next()){
@@ -107,15 +104,6 @@ public class PegManagement {
                     predictions.add(prediction);
                 }
                 json.put("predictions", predictions);
-                StringWriter out = new StringWriter();
-                try {
-                    json.writeJSONString(out);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                String jsonText = out.toString();
-                System.out.print(jsonText);
             }else{
                 return null;
             }
@@ -123,45 +111,96 @@ public class PegManagement {
             logger.severe( "Error while connecting : "
                     + e.getMessage() );
         } finally {
-            logger.info( "Closing the ResultSet object." );
-            if ( result != null ) {
+            closeConnexion(result, prepared_statement, connection);
+            logger.info( "Close the statement object for measurements." );
+            if ( prepared_statement_measurements != null ) {
                 try {
-                    result.close();
+                    prepared_statement_measurements.close();
                 } catch ( SQLException ignore ) {
                 }
             }
-            logger.info( "Close the statement object." );
-            if ( prepared_statement != null ) {
+            logger.info( "Close the statement object for predictions." );
+            if ( prepared_statement_predictions != null ) {
                 try {
-                    prepared_statement.close();
+                    prepared_statement_predictions.close();
                 } catch ( SQLException ignore ) {
                 }
             }
-            logger.info( "Close the connection object." );
-            if ( connexion != null ) {
-                try {
-                    connexion.close();
-                } catch ( SQLException ignore ) {
-                }
-            }
+
         }
         return json;
     }
 
+    /**
+     * This method gets the ids and battery status of all pegs registered in the database:
+     * [{
+     *  "id": 0,
+     *  "bat_status": 0
+     * }]
+     * @param dataSource The dataSource pointing to the database
+     * @return json in case it was found. Null if no peg was found
+     */
+    public static JSONArray getPegs(DataSource dataSource) {
+        JSONArray pegs = new JSONArray();
+
+        /* Connect to the database */
+
+        Connection connection = null;
+        PreparedStatement prepared_statement = null;
+        ResultSet result = null;
+        try {
+            logger.info( "Connecting to the database..." );
+            connection = dataSource.getConnection();
+
+            prepared_statement = connection.prepareStatement("SELECT * FROM peg");
+            result = prepared_statement.executeQuery();
+
+            while ( result.next() ) {
+                JSONObject peg = new JSONObject();
+                peg.put("id", result.getInt("id"));
+                peg.put("bat_status", result.getInt("bat_status"));
+                pegs.add(peg);
+            }
+            if(pegs.isEmpty()){
+                return null;
+            }
+
+        } catch ( SQLException e ) {
+            logger.severe( "Error while connecting : "
+                    + e.getMessage() );
+        } finally {
+            closeConnexion(result, prepared_statement, connection);
+        }
+        return pegs;
+    }
+
+    /**
+     * This method gets the last registered measurement:
+     * {
+     *      "nr": 0,
+     *      "temperature": 0,
+     *      "humidity": 0,
+     *      "conductance": 0,
+     *      "timestamp": "yyyy-mm-dd mm:hh:ss"
+     *  }
+     * @param pegID The ID of the peg that recorded the measurement
+     * @param dataSource The dataSource pointing to the database
+     * @return json in case it was found. Null if no peg was found
+     */
     public static JSONObject getLastMeasurement(int pegID, DataSource dataSource){
         JSONObject json = new JSONObject();
 
         /* Connect to the database */
 
-        Connection connexion = null;
+        Connection connection = null;
         PreparedStatement prepared_statement = null;
         ResultSet result = null;
         try {
             logger.info( "Connecting to the database..." );
-            connexion = dataSource.getConnection();
+            connection = dataSource.getConnection();
 
         /* Create an object monitoring request getting the peg infos */
-            prepared_statement = connexion.prepareStatement("SELECT * FROM measurement WHERE peg_id  = ? " +
+            prepared_statement = connection.prepareStatement("SELECT * FROM measurement WHERE peg_id  = ? " +
                     "ORDER BY timestamp DESC LIMIT 1;");
             prepared_statement.setInt(1, pegID);
 
@@ -170,17 +209,7 @@ public class PegManagement {
 
         /* Fetch the result of the reading of the query */
             if ( result.next() ) {
-                int nr = result.getInt("nr");
-                float temperature = result.getFloat("temperature");
-                float humidity = result.getFloat("humidity");
-                int conductance = result.getInt("conductance");
-                Timestamp timestamp = result.getTimestamp("timestamp");
-                /* Format the result for the output. */
-                json.put("nr", nr);
-                json.put("temperature", temperature);
-                json.put("humidity", humidity);
-                json.put("conductance", conductance);
-                json.put("timestamp", timestamp);
+                addMeasurement(result, json);
             }else{
                 return null;
             }
@@ -188,31 +217,21 @@ public class PegManagement {
             logger.severe( "Error while connecting : "
                     + e.getMessage() );
         } finally {
-            logger.info( "Closing the ResultSet object." );
-            if ( result != null ) {
-                try {
-                    result.close();
-                } catch ( SQLException ignore ) {
-                }
-            }
-            logger.info( "Close the statement object." );
-            if ( prepared_statement != null ) {
-                try {
-                    prepared_statement.close();
-                } catch ( SQLException ignore ) {
-                }
-            }
-            logger.info( "Close the connection object." );
-            if ( connexion != null ) {
-                try {
-                    connexion.close();
-                } catch ( SQLException ignore ) {
-                }
-            }
+            closeConnexion(result, prepared_statement, connection);
         }
         return json;
     }
-
+    /**
+     * Adds a measurement to the database.
+     * @param pegID the peg from which the measurement was made
+     * @param measurement a json object containing the measurement like following:
+     *   {
+     *      "temperature": 0,
+     *      "humidity": 0,
+     *      "conductance": 0,
+     *      "sensor-type": "myType"
+     *   }
+     * */
     public static boolean setPegMeasurement(int pegID, JSONObject measurement, DataSource dataSource){
 
         // verify that the JSON has the correct format and return false if it doesn't
@@ -221,14 +240,14 @@ public class PegManagement {
             return false;
         }
 
-        Connection connexion = null;
+        Connection connection = null;
         PreparedStatement prepared_statement = null;
         ResultSet result = null;
         try {
             logger.info("Connecting to the database...");
-            connexion = dataSource.getConnection();
+            connection = dataSource.getConnection();
             // Get the number of the last measurement
-            PreparedStatement get_prep_st = connexion.prepareStatement(
+            PreparedStatement get_prep_st = connection.prepareStatement(
                     "SELECT nr FROM measurement WHERE peg_id = ? ORDER BY nr DESC LIMIT 1;");
             get_prep_st.setInt(1, pegID);
             result = get_prep_st.executeQuery();
@@ -241,7 +260,7 @@ public class PegManagement {
             }
 
         /* Create an object monitoring request setting the peg measurement */
-            prepared_statement = connexion.prepareStatement(
+            prepared_statement = connection.prepareStatement(
                     "INSERT INTO measurement (peg_id, nr, temperature, humidity, conductance, sensor_type, timestamp)" +
             "VALUES(?, ?, ?, ?, ?, ?, NOW());");
             prepared_statement.setInt(1, pegID);
@@ -258,31 +277,15 @@ public class PegManagement {
             logger.severe( "Error while connecting : "
                     + e.getMessage() );
         } finally {
-            logger.info( "Closing the ResultSet object." );
-            if ( result != null ) {
-                try {
-                    result.close();
-                } catch ( SQLException ignore ) {
-                }
-            }
-            logger.info( "Close the statement object." );
-            if ( prepared_statement != null ) {
-                try {
-                    prepared_statement.close();
-                } catch ( SQLException ignore ) {
-                }
-            }
-            logger.info( "Close the connection object." );
-            if ( connexion != null ) {
-                try {
-                    connexion.close();
-                } catch ( SQLException ignore ) {
-                }
-            }
+            closeConnexion(result, prepared_statement, connection);
         }
         return true;
     }
 
+    /**
+     * Checks if the format of the json object corresponds to a measurement.
+     * @param measurement the Json Object to check
+     * */
     private static boolean formatIsCorrect(JSONObject measurement) {
         HashMap<String, Class> values = new HashMap<String, Class>();
         values.put("temperature", Double.class);
@@ -306,5 +309,54 @@ public class PegManagement {
             }
         }
         return true;
+    }
+
+    /**
+     * Add a measurement read in a database to a json object
+     * @param result the result of the query on the database
+     * @param measurement the json object in which the measurement should be added
+     * */
+    private static void addMeasurement(ResultSet result, JSONObject measurement) throws SQLException {
+        int nr = result.getInt("nr");
+        float temperature = result.getFloat("temperature");
+        float humidity = result.getFloat("humidity");
+        float conductance = result.getFloat("conductance");
+        Timestamp timestamp = result.getTimestamp("timestamp");
+        measurement.put("nr", nr);
+        measurement.put("temperature", temperature);
+        measurement.put("humidity", humidity);
+        measurement.put("conductance", conductance);
+        measurement.put("timestamp", timestamp);
+    }
+
+    /**
+     * Closes the connection to a database
+     * @param result the result object to close
+     * @param prepared_statement the preparedStatement object to close
+     * @param connection the connection to close
+     * */
+
+    private static void closeConnexion(ResultSet result, PreparedStatement prepared_statement, Connection connection) {
+        logger.info( "Closing the ResultSet object." );
+        if ( result != null ) {
+            try {
+                result.close();
+            } catch ( SQLException ignore ) {
+            }
+        }
+        logger.info( "Close the statement object." );
+        if ( prepared_statement != null ) {
+            try {
+                prepared_statement.close();
+            } catch ( SQLException ignore ) {
+            }
+        }
+        logger.info( "Close the connection object." );
+        if ( connection != null ) {
+            try {
+                connection.close();
+            } catch ( SQLException ignore ) {
+            }
+        }
     }
 }

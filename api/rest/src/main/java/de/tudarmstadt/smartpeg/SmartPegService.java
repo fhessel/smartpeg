@@ -1,5 +1,6 @@
 package de.tudarmstadt.smartpeg;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -22,7 +23,7 @@ public class SmartPegService {
 
     @GET
     @Path("/{pegID}")
-    public Response getPeg(@PathParam("pegID") int pegID) {
+    public Response getPegInfos(@PathParam("pegID") int pegID) {
     	try {
 	        ds = getDataSource();
 	        JSONObject pegInfos = PegManagement.getPegInfos(pegID, ds);
@@ -47,9 +48,28 @@ public class SmartPegService {
             JSONObject pegInfos = PegManagement.getLastMeasurement(pegID, ds);
             // If no information related to the peg id is found, then a 404 is returned, else the object with a 200 is.
             if(pegInfos == null){
-                return Response.status(404).entity("peg ID not found").build();
+                return Response.status(404).entity("no measurement found for this peg id").build();
             }else {
                 return Response.status(200).entity(pegInfos.toJSONString()).build();
+            }
+
+        } catch (NamingException ex) {
+            logger.log(Level.SEVERE, "Cannot instantiate DataSource", ex);
+            return Response.status(500).entity("Service not available").build();
+        }
+    }
+
+    @GET
+    @Path("/")
+    public Response getPegs(){
+        try {
+            ds = getDataSource();
+            JSONArray pegs = PegManagement.getPegs(ds);
+            // If no information related to the peg id is found, then a 404 is returned, else the object with a 200 is.
+            if(pegs == null){
+                return Response.status(404).entity("No pegs found").build();
+            }else {
+                return Response.status(200).entity(pegs.toJSONString()).build();
             }
 
         } catch (NamingException ex) {
