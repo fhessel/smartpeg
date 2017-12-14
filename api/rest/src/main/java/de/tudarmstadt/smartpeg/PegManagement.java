@@ -161,9 +161,8 @@ public class PegManagement {
             connexion = dataSource.getConnection();
 
         /* Create an object monitoring request getting the peg infos */
-            prepared_statement = connexion.prepareStatement("SELECT * FROM measurement " +
-                    "WHERE peg_id  = ?" +
-                    "ORDER BY timestamp DESC LIMIT 1");
+            prepared_statement = connexion.prepareStatement("SELECT * FROM measurement WHERE peg_id  = ? " +
+                    "ORDER BY timestamp DESC LIMIT 1;");
             prepared_statement.setInt(1, pegID);
 
         /* Execute a reading query */
