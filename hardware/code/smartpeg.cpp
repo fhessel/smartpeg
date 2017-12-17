@@ -13,8 +13,7 @@ DHT dht = DHT(PIN_DHT22, DHT22);
 // Peg sensor (checks for conductivity of the peg)
 Peg peg    = Peg(PIN_PEG);
 
-// Debugging server
-WiFiServer server(500);
+String url = "http://smartpeg.fhessel.de/smartpeg/peg/" + String(PEG_ID) + "/readings";
 
 //The setup function is called once at startup of the sketch
 void setup()
@@ -39,47 +38,38 @@ void setup()
 #endif
 	setupWiFi();
 
+	Serial.println(String("Trasmitting values to ") + url);
 }
 
 // The loop function is called in an endless loop
 void loop()
 {
-	if(WiFi.status() != WL_CONNECTED) {
-		wifiConnectLoop();
-	}
-
 	// Show the sensor is alive
 	digitalWrite(PIN_LED_WIFI, HIGH);
 	delay(50);
 	digitalWrite(PIN_LED_WIFI, LOW);
 	delay(50);
 
+	float dryness     = peg.readDryness();
+
 #ifdef USE_HDC1080
 	float temperature = sensor.getTemperature();
 	float humidity    = sensor.getHumidity();
+
+	// Start transmitting only after the sensors are ready
+	if (temperature + humidity > 0.001f) {
+		// humidity, temperature, dryness
+		storeMeasurement(temperature, humidity, dryness, SENSOR_TYPE_HDC1080);
+	} else {
+		Serial.println("HDC Sensor is not ready, not recording any values");
+	}
 #endif
 
 #ifdef USE_DHT22
 	float temperatureDht = dht.readTemperature();
 	float humidityDht    = dht.readHumidity();
-#endif
 
-	float dryness     = peg.readDryness();
-#ifdef USE_HDC1080
-	Serial.print("\"DHC1080\",");
-	Serial.print(humidity, 6);
-	Serial.print(" ");
-	Serial.print(temperature, 6);
-	Serial.print(" ");
-	Serial.println(dryness, 6);
-#endif
-#ifdef USE_DHT22
-	Serial.print("\"DHT22\",");
-	Serial.print(humidityDht, 6);
-	Serial.print(" ");
-	Serial.print(temperatureDht, 6);
-	Serial.print(" ");
-	Serial.println(dryness, 6);
+	storeMeasurement(temperatureDht, humidityDht, dryness, SENSOR_TYPE_DHT22);
 #endif
 
 #ifdef USE_HDC1080
@@ -87,84 +77,197 @@ void loop()
 	sensor.triggerMeasurement();
 #endif
 
-	String url = "http://smartpeg.fhessel.de/smartpeg/peg/" + String(PEG_ID) + "/readings";
+	// The following code is the strategy to keep WiFi off for most of the time to save energy.
+	// We store all measurements in an array and only transmit them if the array is nearly full
+	// (nearly full to avoid dismissing values if the transmission fails)
 
-#ifdef USE_DHT22
+	// Check remaining storage space (in periods, that's why we devide by PER_STEP).
+	int storageSpaceLeft = (MEASUREMENT_STORAGE_SIZE - storedMeasurementsPointer) / MEASUREMENTS_PER_STEP;
 
-	{
-		HTTPClient httpDht22;
+	Serial.print("Measurements have been taken. ");
+	Serial.print(storedMeasurementsPointer);Serial.print(" of ");Serial.print(MEASUREMENT_STORAGE_SIZE);
+	Serial.print(" are used. ");Serial.print(storageSpaceLeft);Serial.println(" periods until buffer is full");
 
-		// TODO: Make ID customizable
-		httpDht22.begin(url);
+	// If less than TRANSMIT_PERCENTAGE% space is left, prepare value transmission
+	if (storedMeasurementsPointer >= (MEASUREMENT_STORAGE_SIZE*TRANSMIT_PERCENTAGE)/100) {
+		// This value is required to calculate the time that has been used for communication
+		unsigned long wifiTime = millis();
 
-		String jsonPayloadDht22   =
-			String("{\"humidity\":") +
-			String(humidityDht, 5) +
-			String(",\"temperature\":") +
-			String(temperatureDht, 5) +
-			String(",\"conductance\":") +
-			String(dryness, 5) +
-			String(",\"sensor_type\":") +
-			String("\"DHT22\"}");
+		// At first, try to establish a wifi connection
+		if (WiFi.status() != WL_CONNECTED) {
+			WiFi.forceSleepWake();
+			wifiConnectLoop();
 
-		int httpStatusCode = httpDht22.POST(jsonPayloadDht22);
-
-		if (httpStatusCode != 200) {
-			Serial.print("HTTP POST for DHT22 failed. Got return code: ");
-			Serial.println(httpStatusCode, DEC);
-			for(int i = 1; i < 10; i++) {
-				digitalWrite(PIN_LED_WIFI, HIGH);
-				delay(50);
-				digitalWrite(PIN_LED_WIFI, LOW);
-				delay(50);
+			// If the connection could not be established
+			if (WiFi.status() != WL_CONNECTED) {
+				// Randomly use disconnect() sometimes, as the esp8266 somehow "needs" this
+				if (random(100) < 33) {
+					WiFi.disconnect();
+				}
 			}
-		}
-		httpDht22.end();
-	}
-#endif
-
-#ifdef USE_HDC1080
-	// Start transmitting only after the sensors are ready
-	if (temperature + humidity > 0.001f) {
-		HTTPClient httpHdc1080;
-
-		// TODO: Make ID customizable
-		httpHdc1080.begin(url);
-
-		String jsonPayloadHdc1080 =
-			String("{\"humidity\":") +
-			String(humidity, 5) +
-			String(",\"temperature\":") +
-			String(temperature, 5) +
-			String(",\"conductance\":") +
-			String(dryness, 5) +
-			String(",\"sensor_type\":") +
-			String("\"HDC1080\"}");
-
-		int httpStatusCode = httpHdc1080.POST(jsonPayloadHdc1080);
-
-		if (httpStatusCode != 200) {
-			Serial.print("HTTP POST for HDC1080 failed. Got return code: ");
-			Serial.println(httpStatusCode, DEC);
-			for(int i = 1; i < 10; i++) {
-				digitalWrite(PIN_LED_WIFI, HIGH);
-				delay(50);
-				digitalWrite(PIN_LED_WIFI, LOW);
-				delay(50);
+		} else if (WiFi.status() == WL_CONNECTED) {
+			// If WiFi has been connected, transmit values
+			// We use else if above because connecting takes some seconds and this would mean
+			// transmission is interrupted short after it has started.
+			transmitMeasurements();
+			if (storedMeasurementsPointer == 0) {
+				// This means success, so we cann disable wifi again.
+				WiFi.disconnect();
+				WiFi.forceSleepBegin();
 			}
 		}
 
-		httpHdc1080.end();
+		// check how much time we used for communcation etc.
+		wifiTime = millis()-wifiTime;
+		if (wifiTime < MEASUREMENT_PERIOD) {
+			// If communication took less than measurement_period, then sleep
+			// for the remaining time
+			delay(MEASUREMENT_PERIOD - wifiTime);
+		}
 	} else {
-		Serial.println("HDC Sensor is not ready, not transmitting");
+		// Sleep just until the next measurement
+		delay(MEASUREMENT_PERIOD);
 	}
-#endif
 
-	// Sleep for 95% of the configured time, then wake up wifi and sleep the remaining time.
-	//WiFi.forceSleepBegin((MEASUREMENT_PERIOD*95)/100);
-	delay((MEASUREMENT_PERIOD*95)/100);
-	//WiFi.forceSleepWake();
-	delay((MEASUREMENT_PERIOD*5)/100);
+}
+
+void transmitMeasurements() {
+	unsigned long ms = millis();
+
+
+
+	// We need to batch the data transmissions as HTTPClient does not like IP segmentation.
+	// With an MTU of ~1400 byte payload, using 8 entries per request leaves roughly 175 byte
+	// per entry, which should suffice. One could make this dynamic by checking the string length
+	// but this seens to be a fairly good approach.
+	const int valuesPerTransmission = 8;
+	while(transmittedMeasurementsPointer < storedMeasurementsPointer) {
+		int lastIdx = (transmittedMeasurementsPointer+valuesPerTransmission < storedMeasurementsPointer ?
+				transmittedMeasurementsPointer+valuesPerTransmission :
+				storedMeasurementsPointer);
+
+		HTTPClient httpClient;
+		httpClient.begin(url);
+		httpClient.addHeader("Content-Type", "application/json");
+
+		// Start the json array
+		String jsonPayload = "[";
+		for(int i = transmittedMeasurementsPointer; i < lastIdx; i++) {
+			// For all but the first entry, add a comma to the json string
+			if (i > transmittedMeasurementsPointer) {
+				jsonPayload+=",";
+			}
+
+			// Create the JSON for a single entry
+			measurement_t * measurement = (&storedMeasurements[i]);
+
+			String sensorType = "unknown";
+#ifdef USE_DHT22
+			if (measurement->sensor_type == SENSOR_TYPE_DHT22) sensorType="DHT22";
+#endif
+#ifdef USE_HDC1080
+			if (measurement->sensor_type == SENSOR_TYPE_HDC1080) sensorType="HDC1080";
+#endif
+			jsonPayload +=
+				String("{\"humidity\":") +
+				String(measurement->humidity, 5) +
+				String(",\"temperature\":") +
+				String(measurement->temperature, 5) +
+				String(",\"conductance\":") +
+				String(measurement->dryness, 5) +
+				String(",\"sensor_type\":\"") +
+				sensorType +
+				String("\",\"timeOffset\":-") +
+				String( (ms-(measurement->time_ms))/1000 ) +
+				String("}");
+
+			// If this was the last entry, terminate the json array
+			if (i == lastIdx -1) {
+				jsonPayload+="]";
+			}
+		}
+
+		// Send the request
+		int httpStatusCode = httpClient.POST(jsonPayload);
+
+		if (httpStatusCode >= 200 && httpStatusCode < 300) {
+			// Successful, use the next batch
+			transmittedMeasurementsPointer = lastIdx;
+			Serial.print("Partial Transmission successful.");
+		} else {
+			// An error occured
+			Serial.print("HTTP POST failed. Got return code: ");
+			Serial.print(httpStatusCode, DEC);
+
+			// Show the error using the LED
+			for(int i = 1; i < 10; i++) {
+				digitalWrite(PIN_LED_WIFI, HIGH);
+				delay(50);
+				digitalWrite(PIN_LED_WIFI, LOW);
+				delay(50);
+			}
+
+			if (httpStatusCode >= 400 && httpStatusCode < 500) {
+				Serial.print("\n -> Skipping this batch (4xx = Client error, retry will not help)\n");
+				Serial.print(" -> JSON was:\n    ");
+				Serial.print(jsonPayload);
+				Serial.print("\n   ");
+				transmittedMeasurementsPointer = lastIdx;
+			}
+		}
+		Serial.print(" (");
+		Serial.print(transmittedMeasurementsPointer);
+		Serial.print(" of ");
+		Serial.print(storedMeasurementsPointer);
+		Serial.println(" transmitted)");
+		httpClient.end();
+
+
+		if (
+				// Interrupt if the measurement_period has been exceeded badly.
+				(millis() - ms > MEASUREMENT_PERIOD * 2) &&
+				// Only if transmission isn't complete
+				(storedMeasurementsPointer > transmittedMeasurementsPointer) &&
+				// Only if there's space left in the buffer (where should we store the measurement otherwise?!)
+				(storedMeasurementsPointer < MEASUREMENT_STORAGE_SIZE - MEASUREMENTS_PER_STEP)
+		) {
+			Serial.println("Interrupting transmission to take a measurement");
+			return;
+		}
+	}
+	// Reset buffer pointers
+	Serial.println("All values have been transmitted successfully");
+	storedMeasurementsPointer = 0;
+	transmittedMeasurementsPointer = 0;
+
+}
+
+void storeMeasurement(float temp, float hum, float dryness, int sensor_type) {
+	// Validation (check NaN)
+	if (temp != temp || hum != hum) {
+		Serial.println("Ommitting measurement (some value was NaN)");
+		return;
+	}
+
+	if (storedMeasurementsPointer < MEASUREMENT_STORAGE_SIZE) {
+		measurement_t * measurement = (&storedMeasurements[storedMeasurementsPointer]);
+
+		measurement->dryness     = dryness;
+		measurement->humidity    = hum;
+		measurement->temperature = temp;
+		measurement->sensor_type = sensor_type;
+		measurement->time_ms     = millis();
+
+		storedMeasurementsPointer += 1;
+	} else {
+		Serial.println("Cannot store more measurements. Dropping current measurement!");
+		for(int i = 1; i < 4; i++) {
+			digitalWrite(PIN_LED_WIFI, HIGH);
+			delay(150);
+			digitalWrite(PIN_LED_WIFI, LOW);
+			delay(50);
+		}
+	}
 }
 
 #ifdef USE_HDC1080
@@ -187,46 +290,36 @@ void setupHDCSensor() {
 #endif
 
 void setupWiFi() {
-	Serial.print("Connecting to WiFi...");
+	Serial.print("Setting up WiFi...");
 
 	// Turn of system clock between transmissions
 	WiFi.mode(WIFI_STA);
 	WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
-
-	wifiConnectLoop();
+	WiFi.disconnect();
+	WiFi.forceSleepBegin();
 
 	// Print some status information
 	Serial.println(" Done.");
-	Serial.print("My IP is ");
-    Serial.println(WiFi.localIP());
 }
 
 void wifiConnectLoop() {
+	Serial.println("Trying to connect to WiFi");
 	digitalWrite(PIN_LED_WIFI, HIGH);
 
-	// We count the tries (=500ms steps) and reconnect every 15 tries
-	// until we get a connection
-	unsigned int tries = 0;
-
-	do {
+	WiFi.begin(WIFI_SSID, WIFI_PSK);
+	for(int tries = 0; tries < MEASUREMENT_PERIOD/250 && WiFi.status() != WL_CONNECTED; tries++) {
 		// This will make the led blink
 		digitalWrite(PIN_LED_WIFI, (tries&1) ? HIGH : LOW);
 
-		// Retry required
-		if (tries % 15 == 0) {
-			if (tries > 0) {
-				Serial.print("\nRetrying...");
-				WiFi.disconnect();
-
-				tries = 0;
-				delay(1000);
-			}
-			WiFi.begin(WIFI_SSID, WIFI_PSK);
-		}
 		Serial.print(".");
-		delay(500);
-		tries+=1;
-	} while(WiFi.status() != WL_CONNECTED);
+		delay(250);
+	}
+
+	if (WiFi.status() == WL_CONNECTED) {
+		Serial.println(" Connected!");
+	} else {
+		Serial.println(" No connection...");
+	}
 
 	// Set the LED low to show the connection has been established
 	digitalWrite(PIN_LED_WIFI, LOW);
