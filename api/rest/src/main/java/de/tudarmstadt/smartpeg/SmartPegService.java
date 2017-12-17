@@ -83,17 +83,20 @@ public class SmartPegService {
     @Consumes("application/json")
     public Response setPeg(@PathParam("pegID") int pegID, String measurement){
         JSONParser parser = new JSONParser();
-        JSONObject json;
+        JSONArray json;
         try {
-            json = (JSONObject) parser.parse(measurement);
+            json = (JSONArray) parser.parse(measurement);
         } catch (ParseException e) {
             logger.log(Level.WARNING, "Cannot read input json", e);
             return Response.status(400).entity("Error adding the measurement: Invalid JSON Format.").build();
+        } catch (ClassCastException e) {
+        	logger.log(Level.WARNING, "Expected array as input but got Object", e);
+        	return Response.status(400).entity("Error adding the measurement: Expected array of Objects.").build();
         }
         logger.info("received post request with following json: " + measurement);
         try {
 	        ds = getDataSource();
-	        boolean success = PegManagement.setPegMeasurement(pegID, json, ds);
+	        boolean success = PegManagement.setPegMeasurements(pegID, json, ds);
 	        if(success){
 	            return Response.status(200).entity("Peg Measurement added with success").build();
 	        }else{

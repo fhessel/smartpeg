@@ -7,8 +7,10 @@ import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -232,46 +234,54 @@ public class PegManagement {
      *      "sensor-type": "myType"
      *   }
      * */
-    public static boolean setPegMeasurement(int pegID, JSONObject measurement, DataSource dataSource){
+    public static boolean setPegMeasurements(int pegID, JSONArray measurements, DataSource dataSource){
 
-        // verify that the JSON has the correct format and return false if it doesn't
-        // TODO test if this function works
-        if(!formatIsCorrect(measurement)){
-            return false;
-        }
-
+    	List<JSONObject> validatedMeasurements = new ArrayList<>(measurements.size());
+    	
+    	// Validation
+    	for(Object oMeasurement : measurements) {
+    		if (!(oMeasurement instanceof JSONObject)) {
+    			logger.warning("One of the supplied measurements was not of type JSONObject");
+    		}
+    		JSONObject measurement = (JSONObject)oMeasurement;
+    		
+    		// verify that the JSON has the correct format and return false if it doesn't
+            // TODO test if this function works
+            if(!formatIsCorrect(measurement)){
+            	logger.warning("One of the supplied measurements has a wrong format");
+                return false;
+            }
+            validatedMeasurements.add(measurement);
+    	}
+	    
+    	// Now process the validated measurements
         Connection connection = null;
         PreparedStatement prepared_statement = null;
         ResultSet result = null;
         try {
             logger.info("Connecting to the database...");
             connection = dataSource.getConnection();
-            // Get the number of the last measurement
-            PreparedStatement get_prep_st = connection.prepareStatement(
-                    "SELECT nr FROM measurement WHERE peg_id = ? ORDER BY nr DESC LIMIT 1;");
-            get_prep_st.setInt(1, pegID);
-            result = get_prep_st.executeQuery();
-            // Set nr to the number of the last measurement if there is one
-            int nr;
-            if(result.next()) {
-                nr = result.getInt("nr")+1;
-            }else {
-                nr = 0;
-            }
 
-        /* Create an object monitoring request setting the peg measurement */
+            /* Create an object monitoring request setting the peg measurement */
             prepared_statement = connection.prepareStatement(
                     "INSERT INTO measurement (peg_id, nr, temperature, humidity, conductance, sensor_type, timestamp)" +
-            "VALUES(?, ?, ?, ?, ?, ?, NOW());");
-            prepared_statement.setInt(1, pegID);
-            prepared_statement.setInt(2, nr);
-            prepared_statement.setFloat(3, new Float((Double)measurement.get("temperature")));
-            prepared_statement.setFloat(4, new Float((Double)measurement.get("humidity")));
-            prepared_statement.setFloat(5, new Float((Double)measurement.get("conductance")));
-            prepared_statement.setString(6, measurement.get("sensor_type").toString());
-            // Update the table if it is possible
-            if(prepared_statement.executeUpdate() == -1){
-                return false;
+            "VALUES(?, (SELECT max(nr)+1 FROM measurement m where m.peg_id = ?), ?, ?, ?, ?, date_add(NOW(), interval ? second));");
+            for(JSONObject measurement : validatedMeasurements) {
+	            prepared_statement.setInt(1, pegID);
+	            prepared_statement.setInt(2, pegID);
+	            prepared_statement.setFloat(3, new Float((Double)measurement.get("temperature")));
+	            prepared_statement.setFloat(4, new Float((Double)measurement.get("humidity")));
+	            prepared_statement.setFloat(5, new Float((Double)measurement.get("conductance")));
+	            prepared_statement.setString(6, measurement.get("sensor_type").toString());
+	            long offset = 0;
+	            if (measurement.containsKey("timeOffset")) {
+	            	offset = (Long)measurement.get("timeOffset");
+	            }
+	            prepared_statement.setLong(7, offset);
+	            // Update the table if it is possible
+	            if(prepared_statement.executeUpdate() == -1){
+	                return false;
+	            }
             }
         } catch ( Exception e ) {
             logger.severe( "Error while connecting : "
@@ -287,22 +297,35 @@ public class PegManagement {
      * @param measurement the Json Object to check
      * */
     private static boolean formatIsCorrect(JSONObject measurement) {
+        if(measurement == null){
+            return false;
+        }
+        
+        // Define the expected data types
         HashMap<String, Class> values = new HashMap<String, Class>();
         values.put("temperature", Double.class);
         values.put("humidity", Double.class);
         values.put("conductance", Double.class);
         values.put("sensor_type", String.class);
+        values.put("timeOffset", Long.class);
+        
+        // Set of the keys that have to be checked
         Set<Map.Entry<String, Class>> values_set = values.entrySet();
+        
+        // Iterate over the keys
         Iterator<Map.Entry<String, Class>> values_it = values_set.iterator();
         while(values_it.hasNext()){
             Map.Entry<String, Class> value = values_it.next();
+            
+            // Key in the object
             String key = value.getKey();
+            // Class that this key should have
             Class val_class = value.getValue();
             // TODO test if the class of the result is corresponding to the one wanted
-            if(measurement == null){
+            if (measurement.get(key) == null ) {
+            	logger.warning("Value for " + key + " is missing in request");
                 return false;
-            }
-            if(measurement.get(key) == null || !measurement.get(key).getClass().equals(val_class)){
+            } else if(!measurement.get(key).getClass().equals(val_class)){
             	logger.warning("Value for " + key + " in request with wrong data type (expected=" +
             			val_class + ", got=" + measurement.get(key).getClass() + ")");
                 return false;
