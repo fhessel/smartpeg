@@ -1,8 +1,10 @@
+-- Table for pegs that are known to the server
 CREATE TABLE peg (
     id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     bat_status INT
 );
 
+-- Table for predictions
 CREATE TABLE prediction (
     peg_id INT NOT NULL,
     nr INT NOT NULL,
@@ -11,22 +13,48 @@ CREATE TABLE prediction (
     FOREIGN KEY (peg_id) REFERENCES peg(id)
 );
 
+-- Table for measurements
 CREATE TABLE measurement (
     peg_id INT NOT NULL,
     nr INT NOT NULL,
+    sensor_type VARCHAR(16) DEFAULT NULL,
     temperature FLOAT,
     humidity FLOAT,
-    conductance INT,
+    conductance FLOAT,
     timestamp TIMESTAMP,
     PRIMARY KEY (peg_id, nr),
     FOREIGN KEY (peg_id) REFERENCES peg(id)
 );
 
--- some dummy data
+-- Table that stores the drying_periods (they are used to create training data)
+CREATE TABLE `drying_period` (
+  `peg_id` int(11) NOT NULL,
+  `period_id` int(11) NOT NULL,
+  `ts_start` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `ts_end` timestamp NULL,
+  `ts_dry` timestamp NULL,
+  PRIMARY KEY (`peg_id`,`period_id`),
+  CONSTRAINT `drying_period_fk_pegid` FOREIGN KEY (`peg_id`) REFERENCES `peg` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT INTO peg(bat_status) VALUES (1);
-INSERT INTO peg(bat_status) VALUES (2);
+-- Table that stores the moving average training values
+CREATE TABLE `measurements_train` (
+  `peg_id` int(11) NOT NULL,
+  `nr` int(11) NOT NULL,
+  `sensor_type` varchar(16) default null,
+  `ts` timestamp null default current_timestamp,
+  `avg_temperature` float not null,
+  `avg_humidity` float not null,
+  `avg_conductance` float not null,
+  `remaining_duration` int(11) not null,
+  PRIMARY KEY (`peg_id`,`nr`),
+  CONSTRAINT `measurement_train_fk_measurement`
+    FOREIGN KEY(`peg_id`,`nr`)
+    REFERENCES `measurement` (`peg_id`,`nr`)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT INTO measurement(peg_id, nr, temperature, humidity, conductance, timestamp) VALUES (1, 2, 21.4, 45.7, 36, NOW());
-INSERT INTO measurement(peg_id, nr, temperature, humidity, conductance, timestamp) VALUES (1, 1, 23.4, 50.3, 13, NOW());
+-- Create first peg
+INSERT INTO peg(bat_status) VALUES (0);
 
