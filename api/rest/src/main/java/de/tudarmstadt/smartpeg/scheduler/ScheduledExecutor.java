@@ -28,7 +28,13 @@ public class ScheduledExecutor implements ServletContextListener {
 		executor = Executors.newScheduledThreadPool(2);
 		
 		// Add runnables here.
+		
+		// The MachineLearningTask creates predictions
 	    executor.scheduleAtFixedRate(new MachineLearningTask(), 0, 2, TimeUnit.MINUTES);
+	    
+	    // The DataExtractionTask creates training samples.
+	    // As it is a time consuming task, we schedule it only every hour.
+	    executor.scheduleAtFixedRate(new DataExtractionTask(), 0, 1, TimeUnit.HOURS);
 	    
 	    logger.info("Scheduler has been started");
 	}
