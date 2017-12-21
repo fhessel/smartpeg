@@ -38,7 +38,7 @@ CREATE TABLE `drying_period` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table that stores the moving average training values
-CREATE TABLE `measurements_train` (
+CREATE TABLE `measurement_train` (
   `peg_id` int(11) NOT NULL,
   `nr` int(11) NOT NULL,
   `sensor_type` varchar(16) default null,
