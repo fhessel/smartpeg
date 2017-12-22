@@ -1,5 +1,7 @@
 package de.tudarmstadt.smartpeg.scheduler;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -16,6 +18,9 @@ import javax.naming.NamingException;
 import javax.sql.DataSource;
 
 import static de.tudarmstadt.smartpeg.data.DataSourceProvider.getDataSource;
+
+import static de.tudarmstadt.smartpeg.ml.MLVectorExtractor.createOutputVector;
+import static de.tudarmstadt.smartpeg.ml.MLVectorExtractor.createInputVector;
 
 /**
  * The DataExtractionTask is run periodically to generate training samples from the measurements table.
@@ -65,6 +70,21 @@ public class DataExtractionTask implements Runnable {
     private static final String STMT_UPD_PERIOD_END = 
     		"UPDATE drying_period SET ts_dry=?, ts_end=? WHERE peg_id=? and period_id=? LIMIT 1";
     
+    /** Select timestamps of a drying period */
+    private static final String STMT_SELECT_PERIOD_DATA =
+    		"SELECT ts_start, ts_end, ts_dry FROM drying_period WHERE peg_id=? and period_id=?";
+    
+    /** Select measurements within a period that do not have a train_data entry */
+    private static final String STMT_SELECT_MEASUREMENTS_FOR_TRAIN_DATA_CREATION =
+    		"SELECT m.nr, m.sensor_type, m.timestamp FROM measurement m " +
+			"WHERE m.peg_id = ? and m.timestamp >= ? and m.timestamp <= ? " +
+    		"and (SELECT count(mt.peg_id) FROM measurement_train mt WHERE mt.peg_id=m.peg_id and mt.nr=m.nr)=0 " +
+			"ORDER BY m.timestamp ASC";
+    
+    /** Insert statement for the training data sample table */
+    private static final String STMT_INS_MEASUREMENT_TRAIN = 
+    		"INSERT INTO measurement_train(peg_id, nr, sensor_type, vec_data_in, vec_data_out) VALUES(?,?,?,?,?)";
+        
     /** Amount of values that are used to calculate the moving average over conductance to estimate tsDry */
     private static final int MOVING_AVG_SIZE_CONDUCTANCE = 50;
     
@@ -112,9 +132,7 @@ public class DataExtractionTask implements Runnable {
 					}
 					
 				}
-				
-				dumpTrainingData(con);
-				
+								
 			} catch (SQLException ex) {
 				logger.log(Level.SEVERE, "SQL Error during scheduled DataExtractionTask", ex);
 			}
@@ -295,21 +313,54 @@ public class DataExtractionTask implements Runnable {
     private void createTrainingData(Connection con, int pegId, int periodId) throws SQLException {
     	logger.log(Level.INFO, "Updating training data for peg #" + pegId + " in drying period " + periodId);
 
-    	// TODO: For each and every measurement in the period, create the moving average and store it into measurement_train
+    	try (
+    		PreparedStatement stmtSelectTimestamps = con.prepareStatement(STMT_SELECT_PERIOD_DATA);
+    		PreparedStatement stmtSelectMeasurements = con.prepareStatement(STMT_SELECT_MEASUREMENTS_FOR_TRAIN_DATA_CREATION);
+    		PreparedStatement stmtCreateTrainingData = con.prepareStatement(STMT_INS_MEASUREMENT_TRAIN)
+    	) {
+    		// Fetch timestamp data
+    		stmtSelectTimestamps.setInt(1, pegId);
+    		stmtSelectTimestamps.setInt(2, periodId);
+    		try (ResultSet rsTimestamps = stmtSelectTimestamps.executeQuery()) {
+    			// For each and every measurement in the period, create the moving average and store it into measurement_train
+    			rsTimestamps.next();
+    			Timestamp tsStart = rsTimestamps.getTimestamp(1);
+    			//Timestamp tsEnd = rsTimestamps.getTimestamp(2);
+    			Timestamp tsDry   = rsTimestamps.getTimestamp(3);
+
+    			// If we have not ts_dry, we cannot do anything 
+    			if (tsDry == null) {
+    				logger.log(Level.WARNING, "Cannot create training data for peg #" + pegId + ", period #" + periodId + " - No tsDry could be found");
+    				return;
+    			}
+    			
+    			// Get measurements from measurements table
+    			stmtSelectMeasurements.setInt(1, pegId);
+    			stmtSelectMeasurements.setTimestamp(2, tsStart);
+    			stmtSelectMeasurements.setTimestamp(3, tsDry);
+    			try (ResultSet rsMeasurement = stmtSelectMeasurements.executeQuery()) {
+    				while(rsMeasurement.next()) {
+    					int sampleNr = rsMeasurement.getInt(1);
+    					String sampleSensor = rsMeasurement.getString(2);
+    					Timestamp sampleTs = rsMeasurement.getTimestamp(3);
+    					
+    					// Create training sample
+    					String inputVector = createInputVector(con, pegId, sampleSensor, sampleTs, tsStart);
+    					String outputVector = createOutputVector(sampleTs, tsDry);
+    					stmtCreateTrainingData.setInt(1, pegId);
+    					stmtCreateTrainingData.setInt(2, sampleNr);
+    					stmtCreateTrainingData.setString(3, sampleSensor);
+    					stmtCreateTrainingData.setString(4, inputVector);
+    					stmtCreateTrainingData.setString(5, outputVector);
+    					stmtCreateTrainingData.executeUpdate();
+    				}
+    			}
+    		}
+    	}
     	
     	logger.log(Level.INFO, "Done updating training data for peg #" + pegId + " in drying period " + periodId);
     }
-    
-    /**
-     * This task dumps the training data to a CSV file.
-     * @param con The connection
-     */
-    private void dumpTrainingData(Connection con) throws NamingException {
-    	// TODO: Read JNDI-Filename for output file
-    	
-    	// TODO: Write output file from measurements_train
-    }
-    
+        
     /**
      * Returns the server's time
      * @param con Connection

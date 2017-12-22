@@ -42,11 +42,8 @@ CREATE TABLE `measurement_train` (
   `peg_id` int(11) NOT NULL,
   `nr` int(11) NOT NULL,
   `sensor_type` varchar(16) default null,
-  `ts` timestamp null default current_timestamp,
-  `avg_temperature` float not null,
-  `avg_humidity` float not null,
-  `avg_conductance` float not null,
-  `remaining_duration` int(11) not null,
+  `vec_data_in` text not null,
+  `vec_data_out` text not null,
   PRIMARY KEY (`peg_id`,`nr`),
   CONSTRAINT `measurement_train_fk_measurement`
     FOREIGN KEY(`peg_id`,`nr`)
@@ -54,6 +51,9 @@ CREATE TABLE `measurement_train` (
     ON UPDATE CASCADE
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Index for creating training data
+create index idx_measurement_ts on measurement(timestamp);
 
 -- Create first peg
 INSERT INTO peg(bat_status) VALUES (0);

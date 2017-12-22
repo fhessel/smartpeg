@@ -33,8 +33,8 @@ public class ScheduledExecutor implements ServletContextListener {
 	    executor.scheduleAtFixedRate(new MachineLearningTask(), 0, 2, TimeUnit.MINUTES);
 	    
 	    // The DataExtractionTask creates training samples.
-	    // As it is a time consuming task, we schedule it only every hour.
-	    executor.scheduleAtFixedRate(new DataExtractionTask(), 0, 1, TimeUnit.HOURS);
+	    // As it is a time consuming task, we schedule it only every hours hours, so three times a day
+	    //executor.scheduleAtFixedRate(new DataExtractionTask(), 0, 8, TimeUnit.HOURS);
 	    
 	    logger.info("Scheduler has been started");
 	}

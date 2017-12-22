@@ -19,13 +19,12 @@ import java.util.logging.Logger;
 public class SmartPegService {
     // Received loggers
     private static Logger logger = Logger.getLogger(SmartPegService.class.getName());
-    DataSource ds;
 
     @GET
     @Path("/{pegID}")
     public Response getPegInfos(@PathParam("pegID") int pegID) {
     	try {
-	        ds = getDataSource();
+	        DataSource ds = getDataSource();
 	        JSONObject pegInfos = PegManagement.getPegInfos(pegID, ds);
 	        // If no information related to the peg id is found, then a 404 is returned, else the object with a 200 is.
 	        if(pegInfos == null){
@@ -44,7 +43,7 @@ public class SmartPegService {
     @Path("/{pegID}/measurement")
     public Response getLastMeasurement(@PathParam("pegID") int pegID){
         try {
-            ds = getDataSource();
+        	DataSource ds = getDataSource();
             JSONObject pegInfos = PegManagement.getLastMeasurement(pegID, ds);
             // If no information related to the peg id is found, then a 404 is returned, else the object with a 200 is.
             if(pegInfos == null){
@@ -60,10 +59,9 @@ public class SmartPegService {
     }
 
     @GET
-    @Path("/")
     public Response getPegs(){
         try {
-            ds = getDataSource();
+        	DataSource ds = getDataSource();
             JSONArray pegs = PegManagement.getPegs(ds);
             // If no information related to the peg id is found, then a 404 is returned, else the object with a 200 is.
             if(pegs == null){
@@ -95,7 +93,7 @@ public class SmartPegService {
         }
         logger.info("received post request with following json: " + measurement);
         try {
-	        ds = getDataSource();
+        	DataSource ds = getDataSource();
 	        boolean success = PegManagement.setPegMeasurements(pegID, json, ds);
 	        if(success){
 	            return Response.status(200).entity("Peg Measurement added with success").build();

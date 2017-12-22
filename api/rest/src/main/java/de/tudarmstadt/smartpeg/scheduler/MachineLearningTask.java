@@ -36,6 +36,10 @@ public class MachineLearningTask implements Runnable {
 				// for further information.
 				// This can be used for PreparedStatements as well :)
 				
+				// Use MLVectorExtractor to convert the current measurement into an input vector for the
+				// machine learning system.
+				// The helper class is also used by the training data generator, so the process is the same.
+				
 				logger.warning("NOT IMPLEMENTED: MachineLearningTask scheduled, but not implemented yet.");
 				
 			} catch (SQLException ex) {
