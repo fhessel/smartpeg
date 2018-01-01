@@ -89,7 +89,7 @@ public class DataExtractionTask implements Runnable {
     private static final int MOVING_AVG_SIZE_CONDUCTANCE = 50;
     
     /** Threshold for the conductance value to be considered as dry */
-    private static final float MOVING_AVG_THRESHOLD_CONDUCTANCE = 1.0f;
+    private static final float MOVING_AVG_THRESHOLD_CONDUCTANCE = 1.6f;
     
     /** Threshold (in seconds) of gap between two measurement periods */
     private static final long PERIOD_THRESHOLD = 15*60;
