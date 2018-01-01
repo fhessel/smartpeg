@@ -23,6 +23,14 @@ void setup()
 
 	setupSerialMonitor();
 
+	// Signal initiation of setup
+	for (int i = 0; i < 3; i++) {
+		delay(500);
+		digitalWrite(PIN_LED_WIFI, HIGH);
+		delay(500);
+		digitalWrite(PIN_LED_WIFI, LOW);
+	}
+
 // Configure sensors depending on the configuration in config/measurement.h
 #ifdef USE_DHT22
 	setupDHTSensor();
@@ -39,6 +47,14 @@ void setup()
 	setupWiFi();
 
 	Serial.println(String("Trasmitting values to ") + url);
+
+	// Signal finish of setup
+	for (int i = 0; i < 3; i++) {
+		delay(800);
+		digitalWrite(PIN_LED_WIFI, HIGH);
+		delay(200);
+		digitalWrite(PIN_LED_WIFI, LOW);
+	}
 }
 
 // The loop function is called in an endless loop
