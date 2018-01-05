@@ -25,7 +25,7 @@ parser.add_argument('--batch', type=int, dest='batch_size', action='store', defa
 parser.add_argument('--display', type=int, dest='display_step', action='store', default=1, help='frequency of prints')
 parser.add_argument('--evaluate', dest='model_path', action='store', default='None', help='evaluates the given model')
 parser.add_argument('--refine', dest='refinement_path', action='store', default='None', help='refines the given model')
-parser.add_argument('--data', dest='data_path', action='store', default='HDC1080.npy', help='the path, where the data is stored')
+parser.add_argument('--data', dest='data_path', action='store', default='data/HDC1080.npy', help='the path, where the data is stored')
 parser.add_argument('--save', dest='save_path', action='store', default='models/model.ckpt', help='the path, where the model is saved')
 
 
