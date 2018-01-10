@@ -69,7 +69,7 @@ saver = tf.train.Saver()
 
 # Launch the graph
 with tf.Session() as sess:
-	saver.restore(sess, 'models/refine2.ckpt')
+	saver.restore(sess, 'model.ckpt')
 
 	out = multilayer_perceptron([in_vec], weights, biases)
 	print(out.eval()[0][0])

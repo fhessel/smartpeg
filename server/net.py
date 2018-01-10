@@ -26,7 +26,7 @@ parser.add_argument('--display', type=int, dest='display_step', action='store', 
 parser.add_argument('--evaluate', dest='model_path', action='store', default='None', help='evaluates the given model')
 parser.add_argument('--refine', dest='refinement_path', action='store', default='None', help='refines the given model')
 parser.add_argument('--data', dest='data_path', action='store', default='data/HDC1080.npy', help='the path, where the data is stored')
-parser.add_argument('--save', dest='save_path', action='store', default='models/model.ckpt', help='the path, where the model is saved')
+parser.add_argument('--save', dest='save_path', action='store', default='models/new.ckpt', help='the path, where the model is saved')
 
 
 args = parser.parse_args()
@@ -128,33 +128,23 @@ with tf.Session() as sess:
 				# Compute average loss
 				avg_cost += c / total_batch
 
-			# sample prediction
-			label_value = batch_y
-			estimate = p
-			err = label_value-estimate
-
 			# Display logs per epoch step
 			if epoch % display_step == 0:
 				print ("Epoch:", '%04d' % (epoch+1), "cost=", \
 					"{:.9f}".format(avg_cost))
 				print ("[*]----------------------------")
 				for i in range(3):
-					print ("label value:", label_value[i], \
-						"estimated value:", estimate[i])
+					print ("label value:", batch_y[i], \
+						"estimated value:", p[i])
 				print ("[*]============================")
-			if avg_cost < min_cost:
-				min_cost = avg_cost
+			error = cost.eval({x: X_test, y: Y_test})
+			if error < min_cost:
+				min_cost = error
 				saver.save(sess, args.save_path)
+		print ("Optimization Finished!")
 	else:
 		saver.restore(sess, args.model_path)
-
-	print ("Optimization Finished!")
-
-	# Test model
-	'''correct_prediction = tf.square(pred-y) #tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
-	# Calculate accuracy
-	accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-	print ("Mean squared error:", accuracy.eval({x: X_test, y: Y_test}))'''
-	error = cost.eval({x: X_test, y: Y_test})
-	print("Mean squared error:", error)
+		# Test model
+		error = cost.eval({x: X_test, y: Y_test})
+		print("Mean squared error:", error)
 
