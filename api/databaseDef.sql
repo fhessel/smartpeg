@@ -1,7 +1,8 @@
 -- Table for pegs that are known to the server
 CREATE TABLE peg (
     id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    bat_status INT
+    bat_status INT,
+    prediction FLOAT
 );
 
 -- Table for predictions

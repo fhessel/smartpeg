@@ -22,6 +22,49 @@ import java.util.logging.Logger;
 public class PegManagement {
 
     private static Logger logger = Logger.getLogger(PegManagement.class.getName());
+
+
+    /**
+     * This Method get the prediction of when the laundry will be dry.
+     * Returns a JSON with the prediction
+     * {
+     *     "prediction": 0.0
+     * }
+     * */
+    public static JSONObject getPrediction(int pegID, DataSource dataSource) {
+        JSONObject json = new JSONObject();
+
+        /* Connect to the database */
+
+        Connection connection = null;
+        PreparedStatement prepared_statement = null;
+        ResultSet result = null;
+        try {
+            logger.info( "Connecting to the database..." );
+            connection = dataSource.getConnection();
+
+        /* Create an object monitoring request getting the prediction */
+            prepared_statement = connection.prepareStatement("SELECT prediction FROM peg WHERE peg_id  = ?;");
+            prepared_statement.setInt(1, pegID);
+
+        /* Execute a reading query */
+            result = prepared_statement.executeQuery();
+
+        /* Fetch the result of the reading of the query */
+            if ( result.next() ) {
+                float prediction = result.getFloat("prediction");
+                json.put("prediction", prediction);
+            }else{
+                return null;
+            }
+        } catch ( SQLException e ) {
+            logger.severe( "Error while connecting : "
+                    + e.getMessage() );
+        } finally {
+            closeConnexion(result, prepared_statement, connection);
+        }
+        return json;
+    }
     
     /**
      * This method gets all infos from the peg with the given id (last 10 measurements and predictions):
@@ -226,13 +269,13 @@ public class PegManagement {
     /**
      * Adds a measurement to the database.
      * @param pegID the peg from which the measurement was made
-     * @param measurement a json object containing the measurement like following:
-     *   {
+     * @param measurements a json array containing the measurements like following:
+     *   [{
      *      "temperature": 0,
      *      "humidity": 0,
      *      "conductance": 0,
      *      "sensor-type": "myType"
-     *   }
+     *   }]
      * */
     public static boolean setPegMeasurements(int pegID, JSONArray measurements, DataSource dataSource){
 

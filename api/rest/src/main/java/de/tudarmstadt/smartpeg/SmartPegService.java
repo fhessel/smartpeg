@@ -59,6 +59,7 @@ public class SmartPegService {
     }
 
     @GET
+    @Path("/pegs")
     public Response getPegs(){
         try {
         	DataSource ds = getDataSource();
@@ -107,4 +108,22 @@ public class SmartPegService {
         }
     }
 
+    @GET
+    @Path("/{pegID}/prediction")
+    public Response getPrediction(@PathParam("pegID") int pegID){
+        try {
+            DataSource ds = getDataSource();
+            JSONObject prediction = PegManagement.getPrediction(pegID, ds);
+            // If no information related to the peg id is found, then a 404 is returned, else the object with a 200 is.
+            if(prediction == null){
+                return Response.status(404).entity("no measurement found for this peg id").build();
+            }else {
+                return Response.status(200).entity(prediction.toJSONString()).build();
+            }
+
+        } catch (NamingException ex) {
+            logger.log(Level.SEVERE, "Cannot instantiate DataSource", ex);
+            return Response.status(500).entity("Service not available").build();
+        }
+    }
 }

@@ -20,3 +20,13 @@ There are two ways to handle this for the final project:
 Need to change the datasource for the database if not using mysql.
 
 Need to change database connexion informations in db.properties
+
+In order to deploy on server:
+First commit and push in the master branch, then switch to deploy branch, then merge with master and finally push and switch again to master branch.
+- git checkout deploy-api
+- git merge master
+- git push
+- git checkout master
+
+TODO: local tomcat/mysql configuration
+https://www.mulesoft.com/tcat/tomcat-mysql
