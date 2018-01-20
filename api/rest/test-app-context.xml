@@ -19,6 +19,9 @@
 		driverClassName="org.mariadb.jdbc.Driver"
 		url="jdbc:mariadb://localhost:3306/smart_peg"
 	/> -->
+	
+	<!-- To call the python scripts correctly, we need a pointer to the /server directory in the repo. -->
+	<Environment name="pythonServerBase" value="/path/to/your/repository/smartpeg/server" type="java.lang.String"/>
 
 
 </Context>
