@@ -44,7 +44,7 @@ public class PegManagement {
             connection = dataSource.getConnection();
 
         /* Create an object monitoring request getting the prediction */
-            prepared_statement = connection.prepareStatement("SELECT prediction FROM peg WHERE peg_id  = ?;");
+            prepared_statement = connection.prepareStatement("SELECT prediction FROM peg WHERE id  = ?;");
             prepared_statement.setInt(1, pegID);
 
         /* Execute a reading query */
