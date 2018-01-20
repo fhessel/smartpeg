@@ -1,7 +1,5 @@
 package de.tudarmstadt.smartpeg.scheduler;
 
-import java.io.FileWriter;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -109,7 +107,7 @@ public class DataExtractionTask implements Runnable {
 				try (
 					PreparedStatement stmtPegIds = con.prepareStatement(STMT_SEL_ALL_PEGS);
 					ResultSet rsPegIds = stmtPegIds.executeQuery()
-				) {						
+				) {
 					// Iterate over all pegIDs
 					while(rsPegIds.next()) {
 						// Get pegID from the result set

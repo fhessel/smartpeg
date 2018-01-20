@@ -7,13 +7,8 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NameNotFoundException;
-import javax.naming.NamingException;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -26,6 +21,7 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class MLVectorExtractor {
 
+	@SuppressWarnings("unused")
     private static Logger logger = Logger.getLogger(MLVectorExtractor.class.getName());
 	
 	/** Private constructor, it's only a helper class with static methods */
@@ -106,7 +102,7 @@ public class MLVectorExtractor {
 	 * Creates the output vector for a machine learning sample
 	 * @param sampleTs The sample's timestamp
 	 * @param tsDry The tsDry for the drying period
-	 * @return Output vector (the remaining time, actually)
+	 * @return Output vector (the remaining time in seconds, actually)
 	 */
 	public static String createOutputVector(Timestamp sampleTs, Timestamp tsDry) {
 		long remainingTime = tsDry.getTime() - sampleTs.getTime();
@@ -115,31 +111,5 @@ public class MLVectorExtractor {
 		}
 		return Long.toString(remainingTime/1000)+".0";
 	}
-	
-	/**
-	 * Looks up the filename that should be used to store the training data.
-	 * @return The filename, or "traindata.csv" if no name is set
-	 * @throws NamingException If a NamingException occurs during name resolution.
-	 */
-	public static String getTrainingDataFilename() throws NamingException {
-    	// Get JNDI-Context
-        Context initCtx = new InitialContext();
-        // Navigate to comp/env
-        Context envCtx = (Context) initCtx.lookup("java:comp/env");
-        if (envCtx == null) {
-        	throw new NamingException("Could not find java:comp/env");
-        }
-        // Get the datasource
-        String filename = null;
-        try {
-        	filename = (String)envCtx.lookup("filenames/trainingDump");
-        } catch (NameNotFoundException ex) {
-        	logger.log(Level.WARNING, "filenames/trainingDump was not configured in JNDI, using default traindata.csv on app path");
-        }
-        if (filename == null) {
-        	filename = "traindata.csv";
-        }
-        return filename;
-    }
-		
+			
 }
