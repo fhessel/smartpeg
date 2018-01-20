@@ -11,7 +11,7 @@ if [ ! -d "env" ]; then
 
 	echo "Importing dependencies"
 	source env/bin/activate
-	pip install -r "requirements.txt"
+	pip install -r "requirements_raspberry.txt"
 	deactivate
 fi
 
