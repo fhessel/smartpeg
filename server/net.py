@@ -9,7 +9,7 @@ import get_data
 
 import tensorflow as tf
 from tensorflow.contrib import learn
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 from sklearn.pipeline import Pipeline
 from sklearn import datasets, linear_model
