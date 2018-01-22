@@ -1,0 +1,6 @@
+From: change@this.address
+Subject: SmartPeg - DEPLOYMENT FAILED
+
+An error occured during the deployment of the SmartPeg API.
+
+See last_error.log in the auto deployment directory on the server for further information
