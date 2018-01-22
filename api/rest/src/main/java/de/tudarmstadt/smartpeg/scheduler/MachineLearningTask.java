@@ -38,7 +38,7 @@ public class MachineLearningTask implements Runnable {
     
     /** Statement to get measurements for a specific peg to be able to find the start of the current process */
     private static final String STMT_SEL_FINDSTART =
-    		"SELECT m.timestamp FROM measurement m WHERE peg_id = ? ORDER BY m.timestamp DESC";
+    		"SELECT m.timestamp, m.conductance FROM measurement m WHERE peg_id = ? ORDER BY m.timestamp DESC";
     
     /** Statement to update the predictuion */
     private static final String STMT_UPD_PREDICTION = 
@@ -75,12 +75,30 @@ public class MachineLearningTask implements Runnable {
 							int nowOffset = rsPegs.getInt(3);
 							
 							// Find the start of the current drying period by looking back in the data
+							//
+							// Additionally, we check the time at the end of the current drying period that the conductance has been
+							// under a specific threshold. If this time is longer than 5 minutes, we just set the prediction to zero
+							// to enforce an end of the drying process, independently of the model. The model might return even some
+							// seconds if the conductance is zero.
 							logger.log(Level.INFO, "Determining start of current drying process for peg " + pegID);
+							// Store the first measurement of the period
 							Timestamp tsStart = lastMeasurementTs;
+							// Store the first measuremnt with conductance under the threshold
+							Timestamp tsDrySince = null;
+							boolean tsDryContinuous = true;
+							
 							stmtFindStart.setInt(1, pegID);
 							try (ResultSet rsMeasurement = stmtFindStart.executeQuery()) {
 								while(rsMeasurement.next()) {
 									Timestamp tsCurrent = rsMeasurement.getTimestamp(1);
+									float conductance = rsMeasurement.getFloat(2);
+									if (conductance < 1.5f && tsDryContinuous) {
+										tsDrySince = tsCurrent;
+									} else {
+										// If the values at the end of the process are not continuously
+										// below the threshold, this does not count as finished
+										tsDryContinuous = false;
+									}
 									long difference = tsStart.getTime() - tsCurrent.getTime();
 									// If the difference is bigger than 15 minutes, we found the start
 									if (difference > 15*60*1000) {
@@ -92,39 +110,50 @@ public class MachineLearningTask implements Runnable {
 								}
 							}
 							
-							// Now, we can create an input vector for the python script
-							// Use MLVectorExtractor to convert the current measurement into an input vector for the
-							// machine learning system.
-							// The helper class is also used by the training data generator, so the process is the same.
-							String inputVector = createInputVector(con, pegID, "HDC1080", lastMeasurementTs, tsStart);
-
-							logger.log(Level.INFO, "Calling external process to predict remaining duration for peg " + pegID);
-							// Call the external process (Python + TensorFlow)
-							Process process = new ProcessBuilder(
-								pythonServerBase + "/predict.sh",
-								inputVector
-							).start();
-							BufferedReader predictionOutput = new BufferedReader(new InputStreamReader(process.getInputStream()));
-
-							// Parse the output. The shellscript creates a line PREDICTION=... if successful
-							String line = "";
-							logger.log(Level.INFO, "+--- Output of predict.sh for peg " + pegID + ":");
-							while((line = predictionOutput.readLine())!=null) {
-								logger.log(Level.INFO, "| " + line);
-								if (line.startsWith("PREDICTION=")) {
-									try {
-										prediction = Float.parseFloat(line.substring("PREDICTION=".length()));
-									} catch (NumberFormatException ex) {
-										logger.log(Level.WARNING, "Found a PREDICTION=... line, but could not read prediction", ex);
+							// Time (in seconds) how long the laundry has been dry.
+							long dryFor = 0;
+							if (tsDrySince != null) {
+								dryFor = (lastMeasurementTs.getTime() - lastMeasurementTs.getTime())/1000; 
+							}
+							
+							// Only call machine learning if the laundry has not been dry for >5min by now
+							if (dryFor < 300) {
+								// Now, we can create an input vector for the python script
+								// Use MLVectorExtractor to convert the current measurement into an input vector for the
+								// machine learning system.
+								// The helper class is also used by the training data generator, so the process is the same.
+								String inputVector = createInputVector(con, pegID, "HDC1080", lastMeasurementTs, tsStart);
+	
+								logger.log(Level.INFO, "Calling external process to predict remaining duration for peg " + pegID);
+								// Call the external process (Python + TensorFlow)
+								Process process = new ProcessBuilder(
+									pythonServerBase + "/predict.sh",
+									inputVector
+								).start();
+								BufferedReader predictionOutput = new BufferedReader(new InputStreamReader(process.getInputStream()));
+	
+								// Parse the output. The shellscript creates a line PREDICTION=... if successful
+								String line = "";
+								logger.log(Level.INFO, "+--- Output of predict.sh for peg " + pegID + ":");
+								while((line = predictionOutput.readLine())!=null) {
+									logger.log(Level.INFO, "| " + line);
+									if (line.startsWith("PREDICTION=")) {
+										try {
+											prediction = Float.parseFloat(line.substring("PREDICTION=".length()));
+										} catch (NumberFormatException ex) {
+											logger.log(Level.WARNING, "Found a PREDICTION=... line, but could not read prediction", ex);
+										}
 									}
 								}
-							}
-							logger.log(Level.INFO, "+--- End of predict.sh");
-							
-							// Finally, we need to relate the prediction to the difference between lastMeasurementTs and now,
-							// As there might be some time in between. Calculation has been done in the query
-							if (prediction > 0.0f) {
-								prediction = Math.max(0.0f, prediction + nowOffset);
+								logger.log(Level.INFO, "+--- End of predict.sh");
+								
+								// Finally, we need to relate the prediction to the difference between lastMeasurementTs and now,
+								// As there might be some time in between. Calculation has been done in the query
+								if (prediction > 0.0f) {
+									prediction = Math.max(0.0f, prediction + nowOffset);
+								}
+							} else {
+								logger.log(Level.INFO, "Peg " + pegID + ": Ignoring prediction. Laundry has been dry for about " + (int)(dryFor/60) + " minutes.");
 							}
 						}
 						
