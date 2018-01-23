@@ -6,6 +6,11 @@ ALL_RETURN=0
 
 # do a pull
 git pull
+if (( $? != 0 )); then
+        echo "git pull failed. Aborting."
+        exit 99
+fi
+
 
 LASTCOMMIT=`cat ~/cron/autodeploy-smartpeg-api/lasthash.conf`
 CURRENTCOMMIT=`git log -1 --format="%H"`
