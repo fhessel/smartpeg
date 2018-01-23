@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Smartpeg App</string>
+    <string name="action_settings">Settings</string>
+    <string name="Intro">Welcome to SmartPeg. With this App you can control the dry progress of your laundry</string>
+    <string name="pref_notif_title">Notification</string>
+    <string name="pref_notif_summ">How many minutes, before your laundry will be dry, do you want to be informed?</string>
+    <string name="channel_description">Your laundry is dry</string>
+    <string name="pref_peg_id_title">Peg ID</string>
+    <string name="pref_peg_id_sum">The Id of the SmartPeg, you want to use</string>
+    <string name="pref_help_text">Hier kann man ne Erklärung hinschreiben, wie die SmartPegs zu verwenden sind, ...</string>
+    <string-array name="peg_ids">
+        <item>1</item>
+    </string-array>
+</resources>
+
