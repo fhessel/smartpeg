@@ -25,7 +25,7 @@ Copy the whole `autodeployment` folder to `~/cron/autodeploy-smartpeg-api` in th
 
 Check all template-files etc. for optional adjustment (e.g. you want to change the mail address in the notification templates)
 
-If not yet done, `apt-get install tomcat8 openjdk-8-jdk maven sendmail python3 python-virtualenv` and configure sendmail properly.
+If not yet done, `apt-get install tomcat8 openjdk-8-jdk maven sendmail git` and configure sendmail properly.
 
 Make sure, the `smartpeg` user is allowed to write to `/var/lib/tomcat8/smartpeg/` and that it is member of the group `tomcat8` to delete temporary files created while running the scripts.
 

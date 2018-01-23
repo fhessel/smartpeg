@@ -62,6 +62,12 @@ chmod u=rw,g=rws,o=r /home/smartpeg/data/smartpeg-python
 
 To populate the folder, either run auto deployment or copy the content of the `server` directory of the repository into `smartpeg-python`.
 
+Eventhough a virtual environment is created, some prequisites have to be available on the system to do so:
+
+```
+apt-get install python3 python3-virtualenv python-virtualenv libblas-dev liblaspack-dev libatlas-dev libatlas-base-dev
+```
+
 **Note:** The Java application will call a shell script (`predict.sh`). When setting up the application on Windows, this has to be changed in the Java code.
 
 **Note:** The Python virtual environment is created on-the-fly when the first prediction should be made by the `predict.sh` shell script.
