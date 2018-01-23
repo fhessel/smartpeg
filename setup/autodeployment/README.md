@@ -27,7 +27,7 @@ Check all template-files etc. for optional adjustment (e.g. you want to change t
 
 If not yet done, `apt-get install tomcat8 openjdk-8-jdk maven sendmail python3 python-virtualenv` and configure sendmail properly.
 
-Make sure, the `smartpeg` user is allowed to write to `/var/lib/tomcat8/smartpeg/`
+Make sure, the `smartpeg` user is allowed to write to `/var/lib/tomcat8/smartpeg/` and that it is member of the group `tomcat8` to delete temporary files created while running the scripts.
 
 To activate the script, create a cron job to call the `cron.sh` script regularly, for example, if you wish a check for updates every 10 minutes, you can use the following line:
 

@@ -13,6 +13,8 @@ if [ ! -d "env" ]; then
 	source env/bin/activate
 	pip install -r "requirements_raspberry.txt"
 	deactivate
+    # Required for autodeployment to reset the environment
+    chmod -R g+w ./env/
 fi
 
 # Activate the virtual environment
@@ -29,3 +31,6 @@ deactivate
 
 echo "Done."
 echo "PREDICTION=$RESULT"
+
+# Required for autodeployment to override temporary files
+chmod -R g+w ./__pycache__/

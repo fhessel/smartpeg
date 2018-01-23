@@ -57,7 +57,7 @@ We use a directory in the home-directory of the `smartpeg` user:
 mkdir /home/smartpeg/data
 mkdir /home/smartpeg/data/smartpeg-python
 chown smartpeg:tomcat8 /home/smartpeg/data/smartpeg-python
-chmod u=rws,g=rws,o=r /home/smartpeg/data/smartpeg-python
+chmod u=rw,g=rws,o=r /home/smartpeg/data/smartpeg-python
 ```
 
 To populate the folder, either run auto deployment or copy the content of the `server` directory of the repository into `smartpeg-python`.
