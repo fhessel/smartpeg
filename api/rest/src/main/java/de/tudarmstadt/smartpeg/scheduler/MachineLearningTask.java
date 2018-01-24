@@ -113,7 +113,7 @@ public class MachineLearningTask implements Runnable {
 							// Time (in seconds) how long the laundry has been dry.
 							long dryFor = 0;
 							if (tsDrySince != null) {
-								dryFor = (lastMeasurementTs.getTime() - lastMeasurementTs.getTime())/1000; 
+								dryFor = (lastMeasurementTs.getTime() - tsDrySince.getTime())/1000; 
 							}
 							
 							// Only call machine learning if the laundry has not been dry for >5min by now
@@ -150,12 +150,16 @@ public class MachineLearningTask implements Runnable {
 								// Finally, we need to relate the prediction to the difference between lastMeasurementTs and now,
 								// As there might be some time in between. Calculation has been done in the query
 								if (prediction > 0.0f) {
-									prediction = Math.max(0.0f, prediction + nowOffset);
+									prediction = prediction + nowOffset;
 								}
+								
 							} else {
 								logger.log(Level.INFO, "Peg " + pegID + ": Ignoring prediction. Laundry has been dry for about " + (int)(dryFor/60) + " minutes.");
 							}
 						}
+						
+						// Remove negative predictions
+						Math.max(0.0f, prediction);
 						
 						// Write the prediction to the database
 						stmtUpdatePrediction.setFloat(1, prediction);
