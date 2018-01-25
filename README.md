@@ -20,8 +20,8 @@ together with the database and API description files
 
 The final hardware prototype looked like that. The PCB as well as the battery have roughly the length of the peg, so they can be glued together easily:
 
-![Front view of the final hardware prototype](https://github.com/fhessel/smartpeg/blob/master/hardware/schematics/smartpeg-final1.jpg?raw=true)
-![Rear view of the final hardware prototype](https://github.com/fhessel/smartpeg/blob/master/hardware/schematics/smartpeg-final2.jpg?raw=true)
+![Front view of the final hardware prototype](https://github.com/fhessel/smartpeg/blob/master/hardware/schematics/smartpeg_final1.jpg?raw=true)
+![Rear view of the final hardware prototype](https://github.com/fhessel/smartpeg/blob/master/hardware/schematics/smartpeg_final2.jpg?raw=true)
 
 The following image shows a screenshot of one drying process together with the prediction of the neural network:
 
