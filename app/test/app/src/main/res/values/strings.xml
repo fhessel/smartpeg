@@ -1,13 +1,14 @@
 <resources>
-    <string name="app_name">Smartpeg App</string>
+    <string name="app_name">SMAUNDRY App</string>
     <string name="action_settings">Settings</string>
-    <string name="Intro">Welcome to SmartPeg. With this App you can control the dry progress of your laundry</string>
+    <string name="Intro">Welcome to SMAUNDRY. With this App you can control the dry progress of your laundry</string>
     <string name="pref_notif_title">Notification</string>
     <string name="pref_notif_summ">How many minutes, before your laundry will be dry, do you want to be informed?</string>
     <string name="channel_description">Your laundry is dry</string>
     <string name="pref_peg_id_title">Peg ID</string>
-    <string name="pref_peg_id_sum">The Id of the SmartPeg, you want to use</string>
-    <string name="pref_help_text">Hier kann man ne Erklärung hinschreiben, wie die SmartPegs zu verwenden sind, ...</string>
+    <string name="pref_peg_id_sum">The Id of the SMAUNDRY peg, you want to use</string>
+    <string name="pref_help_text">Wer ist nach dem Waschen und Aufhängen nie in die Situation geraten, regelmäßig zu prüfen, ob die Wäsche trocken ist? Zusätzlich droht draußen die Gefahr von Regenschauern und im Haus beschleunigt ein gutes Raumklima das Trocknen.\n\n
+                    SMAUNDRY, die smarte Wäscheklammer ermöglicht anhand von Temperatur-, Luftfeuchtigkeitssensor und Leitfähigkeit des Stoffes dem Nutzer mitzuteilen, wann seine Wäsche trocken ist. Dabei wird der Nutzer über die SMAUNDRY App benachrichtigt, wann die Wäsche trocken ist.</string>
     <string-array name="peg_ids">
         <item>1</item>
     </string-array>

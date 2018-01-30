@@ -45,7 +45,7 @@ public class MyService extends Service {
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             String id = "01";
-            CharSequence name = "SmartPeg";
+            CharSequence name = "SMAUNDRY";
             NotificationChannel mChannel = null;
             mChannel = new NotificationChannel(id, name, NotificationManager.IMPORTANCE_HIGH);
             // Configure the notification channel.
