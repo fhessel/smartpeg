@@ -27,6 +27,7 @@ public class API extends AsyncTask<String, String, JSONObject> {
     int progress;
 
 
+
     public static JSONObject getMeasurementsHttp(String id) {
         URL url = null;
         try {
@@ -178,7 +179,8 @@ public class API extends AsyncTask<String, String, JSONObject> {
 
 
         if(emul) {
-            String v = "{\"nr\":100634,\"temperature\":20.2,\"humidity\":56.7,\"conductance\":15.8358,\"timestamp\":2017-12-18 10:29:48.0}";
+            Log.d("api", String.valueOf(60 - System.nanoTime()/100000000000d));
+            String v = "{\"nr\":100634,\"temperature\":20.2,\"humidity\":56.7,\"conductance\":" + String.valueOf(60 - System.nanoTime()/100000000000d) + ",\"timestamp\":2017-12-18 10:29:48.0}";
             JSONObject o = getJsonObjectTimeFormat(v);
             return o;
         }else{

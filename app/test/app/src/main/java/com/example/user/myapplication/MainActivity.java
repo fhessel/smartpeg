@@ -62,14 +62,16 @@ public class MainActivity extends AppCompatActivity {
                 values = api.get();
                 int leftMin = ((Double) values.get("prediction")).intValue()/60;
 
-                int p;
-                if(c==0) { p = 1;
+                Double p;
+                if(c==0) { p = 1.;
                 }else if(maxConductance <= c) {
                     maxConductance = c;
-                    p = 0;
-                } else{ p = 1-maxConductance.intValue()/c.intValue();
+                    p = 0.;
+                } else{
+                    p = (100-100*c/maxConductance);
+                    Log.d("main", String.valueOf(p));
                 }
-                updateScreen(p, leftMin, h, t);
+                updateScreen(p.intValue(), leftMin, h, t);
 
             } catch (Exception e) {
                 e.printStackTrace();

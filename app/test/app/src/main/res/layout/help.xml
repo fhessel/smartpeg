@@ -8,12 +8,18 @@
     tools:layout_editor_absoluteY="81dp">
 
 
-
     <TextView
         android:id="@+id/textView8"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="@string/pref_help_text" />
+        android:layout_marginEnd="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:text="@string/pref_help_text"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <android.support.constraint.Guideline
         android:id="@+id/guideline"
